@@ -1,0 +1,131 @@
+\documentclass{report}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[style=authoryear, citestyle=authoryear, doi=false, url=false, isbn=false]{biblatex}
+\usepackage{minitoc}
+\usepackage{xcolor}
+\usepackage{amssymb,amsmath}
+\usepackage{graphicx}
+\usepackage{dsfont}
+\usepackage{subcaption}
+
+\usepackage{hyperref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                SETUP AND MACRO DECLARATIONS                                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Color definitions from: http://latexcolor.com/
+\definecolor{alizarin}{rgb}{0.82, 0.1, 0.26}
+\definecolor{azure}{rgb}{0.0, 0.5, 1.0}
+\definecolor{deeplilac}{rgb}{0.6, 0.33, 0.73}
+
+% Hyperref setup
+\hypersetup{
+    linktoc=all,
+    linktocpage=true,
+    colorlinks=true,
+    linkcolor=azure,
+    urlcolor=alizarin
+}
+
+% Redefine cite and textcite so author + year clickable in the color I want
+\newcommand\mkbibcolor[2]{\textcolor{#1}{\hypersetup{citecolor=}#2}}  
+\DeclareCiteCommand{\cite}[\mkbibcolor{deeplilac}]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \printtext[bibhyperref]{\usebibmacro{cite}}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+  
+\DeclareCiteCommand{\textcite}[\mkbibcolor{deeplilac}]
+  {\boolfalse{cbx:parens}}
+  {\usebibmacro{citeindex}%
+   \printtext[bibhyperref]{\usebibmacro{textcite}}}
+  {\ifbool{cbx:parens}
+     {\bibcloseparen\global\boolfalse{cbx:parens}}
+     {}%
+   \multicitedelim}
+  {\usebibmacro{textcite:postnote}}
+  
+% Bibmacro manipulation to have author name as link to paper
+\newcommand{\letbibmacro}[2]{%
+  \csletcs{abx@macro@#1}{abx@macro@#2}%
+}
+\letbibmacro{orig-author}{author}
+\renewbibmacro*{author}[1]{%
+  \iffieldundef{doi}{%
+    \iffieldundef{url}{%
+      \iffieldundef{isbn}{%
+        \iffieldundef{issn}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup
+        }{%
+          \href{http://books.google.com/books?vid=ISSN\thefield{issn}}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup}%
+        }%
+      }{%
+        \href{http://books.google.com/books?vid=ISBN\thefield{isbn}}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup}%
+      }%
+    }{%
+      \href{\thefield{url}}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup}%
+    }%
+  }{%
+    \href{http://dx.doi.org/\thefield{doi}}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup}%
+  }%
+}
+
+% Augment space between entries in the bibliography
+\setlength\bibitemsep{1.2\itemsep}
+
+% Define chapter abstract
+\newenvironment{chapabstract}{%
+    \begin{large}%
+      \bfseries Abstract \\
+    \end{large}
+% 	\textbf{Abstract}
+    }%
+   {\par}
+  
+% Math
+\DeclareMathOperator*{\argmin}{argmin}
+
+% Text spacing
+\renewcommand{\baselinestretch}{1.3}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Thesis}
+\author{Hadrien Bertrand}
+
+\addbibresource{references.bib}
+
+% \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
+\includeonly{chap_hyperopt}
+
+\begin{document}
+\maketitle
+
+\dominitoc
+\tableofcontents
+
+\include{chap_introduction}
+
+\include{chap_hyperopt}
+
+\include{chap_segmentation}
+
+\include{chap_transfer_learning}
+
+\include{chap_conclusion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                        BIBLIOGRAPHY                                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\nocite{chollet2015keras}
+\nocite{bertrand2017ISBI}
+\nocite{pedregosa2011sklearn}
+\nocite{tensorflow2015}
+
+\printbibliography[heading=bibintoc,title={Bibliography}]
+
+\end{document}
