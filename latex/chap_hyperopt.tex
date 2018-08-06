@@ -126,7 +126,7 @@ This matrix is all we need to draw samples from the distribution. We pick a set 
 
 Some such samples are shown in Figure~\ref{fig:gp_prior}. The covariance function chosen for now is the squared exponential kernel:
 \begin{equation}
-	k(\mathrm{x}, \mathrm{x'}) = \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
+	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
 \end{equation}
 Other kernels and their properties are discussed later. 
 
@@ -141,12 +141,12 @@ Back to Figure~\ref{fig:gp_prior}, the thick blue line represents the mean of th
 	\label{fig:gp_prior}
 \end{figure}
 
-In probabilistic terms, this corresponds to the prior. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*} \right)$. We are interested in the posterior $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is
+In probabilistic terms, this corresponds to the prior. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*}, \theta \right)$ ($\theta$ are the hyper-parameters of the model which we will deal with later). We are interested in the posterior $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is
 
 \begin{equation}
-    p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
+    p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
     =
-    \frac{p\left( \mathrm{y}, \mathrm{y_*} | \mathrm{X}, \mathrm{X_*} \right)}{p\left( \mathrm{y} | \mathrm{X} \right)}
+    \frac{p\left( \mathrm{y}, \mathrm{y_*} | \mathrm{X}, \mathrm{X_*}, \theta \right)}{p\left( \mathrm{y} | \mathrm{X}, \theta \right)}
 \end{equation}
 
 The numerator is called the joint distribution and the denominator is the marginal likelihood. First, we compute the joint distribution
@@ -170,7 +170,7 @@ Training a Gaussian process simply means pre-computing $K(\mathrm{X}, \mathrm{X}
 But the joint distribution isn't enough, it will generate functions that do not match the observed data. The posterior is obtained by conditioning the joint distribution to the observations, and because every term involved is a Gaussian distribution, there is a well-known result giving us the following equation
 
 \begin{equation}
-    p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
+    p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
     =
     \mathcal{N} \left( K_* K^{-1} y, 
     K_{**} - K_* K^{-1} K_*^T \right)
@@ -195,35 +195,41 @@ So far we have assumed for simplification that the data is noise-free, however i
 
 We glossed over the choice of kernel until now. The most common is the one we used so far, the squared exponential kernel
 \begin{equation}
-	k(\mathrm{x}, \mathrm{x'}) = \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
+	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
 \end{equation}
 
-This kernel has only one hyper-parameter $l$ which is a vector of same dimensionality as $\mathrm{x}$. It is called the characteristic length-scale and measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output. 
+This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ controls the scale of the predicted output and $l$ is a vector of same dimensionality as $\mathrm{x}$ called the characteristic length-scale which measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output. 
 
 The samples from this kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are trying to model. In the context of Bayesian optimization, a more realistic alternative is the Matérn $5/2$ kernel
 \begin{equation}
-    k(r) = \left( 1 + \frac{\sqrt{5}r}{l} + \frac{5r^2}{3l^2} \right) \exp \left( - \frac{\sqrt{5}r}{l}\right)
+    k(r) = \sigma^2 \left( 1 + \frac{\sqrt{5}r}{l} + \frac{5r^2}{3l^2} \right) \exp \left( - \frac{\sqrt{5}r}{l}\right)
 \end{equation}
 
-where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. $l$ is the characteristic length-scale with the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means the samples will be twice differentiable. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $5/2$ is a good compromise between too smooth and too difficult to optimize $l$ as many point estimate methods requires twice differentiability (\textcite{snoek2012NIPS}). Figure TODO shows what samples from these kernels look like.
+where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means the samples will be twice differentiable. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods requires twice differentiability (\textcite{snoek2012NIPS}). Figure TODO shows what samples from these kernels look like.
 
 [TODO fig influence of $\nu$]
 
 The kernels presented have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It's very relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. Depending on the meaning of the hyper-parameters, this is not desirable. The solution is to use a non-stationary kernel, which we discuss in Section~\ref{ssec:nosta}.
 
-Another problem of those kernels is that they have themselves an hyper-parameter $l$ which needs to be chosen for each dimension of the input. As said before, $l$ is the characteristic length-scale. By construction of those covariance functions and as shown in~\textcite{neal1996phd}, the inverse of the length-scale determines how relevant an input is. In the context of hyper-parameter optimization, it can help us choose which hyper-parameters to tune carefully. It is therefore very important to select the correct value for $l$. 
+Another problem of those kernels is that they have themselves hyper-parameters $\theta$ which needs to be chosen. As said before, $l$ is the characteristic length-scale. By construction of those covariance functions and as shown in~\textcite{neal1996phd}, the inverse of the length-scale determines how relevant an input is. In the context of hyper-parameter optimization, it can help us choose which hyper-parameters to tune carefully. It is therefore very important to select the correct value for $l$. 
 
-There are two ways to learn $l$ and other potential hyper-parameters of a covariance function. The simplest one is to maximize the marginal likelihood, which can be derived to  
+There are two ways to learn $\theta$. The first is to maximize the marginal likelihood, which can be derived to  
 \begin{equation}
-	\log p\left(\mathrm{y} | \mathrm{X}, l\right) = - \frac{1}{2} \mathrm{y}^T K^{-1} \mathrm{y} - \frac{1}{2} \log |K| - \frac{n}{2} \log 2 \pi
+	\log p\left(\mathrm{y} | \mathrm{X}, \theta \right) = - \frac{1}{2} \mathrm{y}^T K^{-1} \mathrm{y} - \frac{1}{2} \log |K| - \frac{n}{2} \log 2 \pi
 \end{equation}
 
-The optimization can be done with any method, eventually with multiple restarts as there are no guarantee of a unique optima. 
+The optimization can be done with any off-the-shelf method, eventually with multiple restarts as there are no guarantee of a unique optima. 
 %For example, the scikit-learn (\textcite{pedregosa2011sklearn}) implementation uses BFGS with 10 restarts by default.
 
-TODO MC
+The other solution is to not learn $\theta$ at all and instead marginalize the hyper-parameters, i.e. at inference compute 
+\begin{equation}
+    p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
+    = \int p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right) p \left( \theta | \mathrm{X}, \mathrm{y} \right) d\theta
+\end{equation}
 
-An extensive treatment of the topic can be found in~\textcite{rasmussen2005}.
+This integral is usually intractable but can be approximated by sampling methods. \textcite{murray2010NIPS} use slice sampling, \textcite{garbuno2016CSDA} use asymptotically independent Markov sampling and \textcite{titsias2011} review different Monte Carlo methods used for this problem.
+
+For a more extensive treatment on Gaussian Processes, see~\textcite{rasmussen2005}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Acquisition Functions}
