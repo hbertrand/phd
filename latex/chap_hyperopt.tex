@@ -235,34 +235,52 @@ For a more extensive treatment on Gaussian Processes, see~\textcite{rasmussen200
 \subsection{Acquisition Functions}
 \label{ssec:acqfunc}
 
-==Our chosen acquisition function is the Expected Improvement~\cite{jones2001}, which uses the improvement function $I$~\cite{shahriari2016IEEE}:
+TODO:
+\begin{itemize}
+    \item Figure PI vs EI
+    \item Should I talk about other functions, even if we didn't use them ? (Upper Confidence Bound, Thompson Sampling, Entropy-search Portfolio)
+\end{itemize}
+
+In the context of Bayesian optimization, the Gaussian process gives us for each set of hyper-parameters an estimation of the performance of the corresponding model and the uncertainty of the Gaussian process in its estimation. But we don't have a way to decide which model is the most interesting to train. Do we pick a model that will be slightly better than our best current model, i.e. where the Gaussian process gives low uncertainty, or do we pick a model with high uncertainty but which could have terrible performance ? There is an exploration/exploitation trade-off. It is the role of the acquisition function to determine which model to train.
+
+One acquisition function is the Probability of Improvement (\textcite{kushner1964}). It chooses the model which has the highest probability of having better results than a target, which is usually picked to be the loss of the current best model. The PI is defined as such:
 \begin{equation}
-	I(x) = \left(y_* - \mu(x) \right) \mathds{1} \left(y_* > \mu(x) \right)
+    PI(\mathrm{x}) = \Phi \left( \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}\right)
 \end{equation}
-where $x$ represents a given configuration, $y_*$ is the minimum loss found so far and $\mu$ is the mean returned by the Gaussian process. It will be $0$ if the predicted mean is less than the best loss found so far (which means that there is no improvement), otherwise it is proportional to the gap between the predicted mean and best loss. From there, the Expected Improvement is:
+
+where $\Phi$ is the Normal cumulative distribution function, $\mathrm{x}$ represents a given set of hyper-parameters, $y_*$ is the minimum loss found so far, $\mu$ is the mean returned by the Gaussian process and $\sigma$ the variance.
+
+The problem with this function is that it is highly sensitive to choice of target. If picked to be the loss of the best model found so far, it will sample models very close to it, meaning we need to specify how much better we want to be. But that's very inconvenient because we usually have no idea how much better we can get. Should we try to find a model $1 \%$ better ? $5 \%$ ? $25 \%$ And if we pick too big of an improvement, the function will simply select the models with the highest uncertainty.
+
+Instead, we can use the Expected Improvement function (\textcite{schonlau1998}) which build on the Probability of Improvement:
 \begin{equation}
-	EI(x) = \mathbb{E}[I(x)] = s(x) [u\Phi(u)+\phi(u)]
+	EI(\mathrm{x})  = \sigma (\mathrm{x}) [u\Phi(u)+\phi(u)]
 \end{equation}
 with
 \begin{equation}
-	u = \frac{y_* - \mu(x)}{\sigma(x)}
+	u = \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}
 \end{equation}
-where $\sigma$ is the variance returned by the Gaussian process, and $\Phi$ and $\phi$ are the normal cumulative distribution and density function, respectively.
 
-==This function offers a good compromise between exploration of regions with high uncertainty and exploitation. Moreover, it does not add any hyper-parameter to tune. Once we have computed EI for each configuration, we do not pick the argmax as classically done in the literature but we normalize the results to make a distribution from which we sample the next configurations to test.
+where $\phi$ is the normal density function. EI is obtained by taking the expectation of the improvement function (\textcite{shahriari2016IEEE}), defined as such:
 
-Probability of Improvement
+\begin{equation}
+	I(\mathrm{x}) = \left(y_* - \mu(\mathrm{x}) \right) \mathds{1} \left(y_* > \mu(\mathrm{x}) \right)
+\end{equation}
+This function is equal to $0$ if the predicted mean is less than the best loss found so far (which means that there is no improvement), otherwise it is proportional to the gap between the predicted mean and best loss. 
 
-Expected Improvement
+The Expected Improvement has one big advantage over the Probability of Improvement. The target is always the minimum loss found so far, meaning there is no need to guess a threshold of improvement. 
 
-Upper Confidence Bound
-
-Thompson Sampling
-
-Entropy-search Portfolio
+An extended discussion on the trade-offs between Probability of Improvement and Expected Improvement can be found in~\textcite{jones2001}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Tying it together}
+
+TODO:
+\begin{itemize}
+    \item Figure step-by-step BO
+\end{itemize}
+
+Let's resume the situation. We are trying to find the best model in a large family of models in a reasonable amount of time. We have already trained some models and are trying to decide which model to train next. First, we fit a Gaussian process on the models already trained, with the hyper-parameters as the input, and the loss of the corresponding model as the output. We then sample new combinations and have them predicted by the Gaussian process. For each sample, we also compute the Expected Improvement. The next model to train is the one with the highest EI. Once it's trained, we fit again the Gaussian process with the new information, and we repeat the process until we run out of time or we obtain a model good enough for our purposes. Figure~\ref{fig:bo} shows this process on a one-dimensional problem.
 
 \begin{figure}[htb]
 	\centering
@@ -271,24 +289,31 @@ Entropy-search Portfolio
 	\label{fig:bo}
 \end{figure}
 
-Hyperopt~\textcite{bergstra2013ICML}
+Some questions remain. How to pick the first model ? Select a random configuration of hyper-parameters from the hyper-parameter space. What loss should the Gaussian process predict ? Ideally, the loss of the model on the validation set. Otherwise the loss on the training set works fine. How to sample configurations ? Uniformly from the hyper-parameter space. How many configurations should be sampled before selecting a model to train ? As many as reasonably possible. The step of selecting a model should be much faster than training it, and most of the cost of Bayesian optimization should be in the inversion of the Gram matrix (see Section~\ref{ssec:practical} for details).
 
-Practical~\textcite{snoek2012NIPS}
+%Hyperopt~\textcite{bergstra2013ICML}
+
+%Practical~\textcite{snoek2012NIPS}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Practical Challenges}
+\label{ssec:practical}
 
-==One important aspect of this method is that the training time of the model is a dimension of the hyper-parameter space. This means that the method is free to choose how long to train each model. In practice we found that it prefers longer training time, even though it looks like a lower training time is enough to get a good estimate of the worth of the model and would allow the evaluation of more models. This is a flaw of the method, which lacks an explicit notion of budget and a way to best exploit it.
-
-\subsubsection{Choosing kernel parameters}
-
-Optimization, sampling
+%==One important aspect of this method is that the training time of the model is a dimension of the hyper-parameter space. This means that the method is free to choose how long to train each model. In practice we found that it prefers longer training time, even though it looks like a lower training time is enough to get a good estimate of the worth of the model and would allow the evaluation of more models. This is a flaw of the method, which lacks an explicit notion of budget and a way to best exploit it.
 
 \subsubsection{Conditional spaces}
 
-Tree of Parzen Estimator
+TODO
+\begin{itemize}
+    \item Describe cylindrical embeddings
+    \item Describe tree of Parzen estimator
+\end{itemize}
 
-Open problem using GP
+The version of Bayesian optimization we presented deals efficiently with both discrete and continuous hyper-parameters. But what about conditional hyper-parameters ? For example, some hyper-parameter could be specific to a particular layer and one hyper-parameter could control the number of layers. But then, what happens to the hyper-parameters of a non-existent layer ? With a Gaussian process, we need to give them a value and it means there will be many configurations that corresponds to the same model. In practice, we can ignore those cases, and the Gaussian process will eventually give a low uncertainty in those regions and pick models elsewhere. But this is extremely wasteful as we will retrain the same model many times before this happens ! 
+
+One solution is to use a specialized kernel called a cylindrical kernel (\textcite{swersky2013},~\textcite{oh2018}).
+
+Another solution is to not use a Gaussian process at all. It has been our model of choice so far but other alternatives exist. One such alternative is tree-structured Parzen estimator (\textcite{bergstra2011NIPS}).
 
 \subsubsection{Parallelization}
 
@@ -309,6 +334,12 @@ Conditional neural processes ?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Contribution: Incremental Cholesky decomposition}
+
+TODO:
+\begin{itemize}
+    \item Rewrite the explanation
+    \item Should I put the full proof of the results here ? In an appendix ?  
+\end{itemize}
 
 One of the big timesink of GP: computing the Cholesky decomposition. But in BO, the Gram matrix between calls is mostly the same, just with new rows. So we can store the decomposition and just update it.
 
@@ -350,28 +381,150 @@ is already known. The question is then: can we compute $L_{(n+k)}$ from $L_{(n)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
 
-ISBI
+This section describes and extend work that was presented at ISBI 2017.
+
+%==starting from a baseline network (Section~\ref{ssec:baseline}), we present an automatic strategy to find better architectures given our clinical context. We constrain our search to a space of networks represented by a specific parametrization (Section~\ref{ssec:param}) that includes enough diversity and, at the same time, promising models (including AlexNet-like, VGG-like). Inspired by the work in~\cite{jones_taxonomy_2001}, we devise an automatic optimization process (Section~\ref{ssec:search}) to produce an ensemble of successful models (Section~\ref{ssec:ensemble}). The interest and efficiency of this strategy are demonstrated on our application in Section~\ref{sec:results}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Problem Description}
+\subsection{Dataset and Problem Description}
+
+TODO:
+\begin{itemize}
+    \item Update table
+    \item Pick better images from the dataset
+\end{itemize}
+
+\begin{figure}
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_1}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_2}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_3}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_4}
+        \end{subfigure}
+        \caption{Examples of abdomen in our dataset showing the great variety of protocols}
+        \label{fig:abdomens}
+\end{figure}
+
+Given an MRI volume we would like to know which anatomical region are contained in it and their position in the volume. Since MRI data is acquired in a slice by slice approach, we reduce the problem to a two dimension classification task (into head, chest, abdomen, pelvis, legs and spine).
+
+\begin{table}
+	\centering
+	\begin{tabular}{ | l | c | r | }
+		\hline
+		Body Part & \# Volumes & \# Slices \\ \hline
+		Head & 301 & 9032 \\
+		Abdomen & 282 & 11532 \\
+		Pelvis & 225 & 8854 \\
+		Spine & 386 & 7732 \\
+		\hline
+	\end{tabular}
+	\caption{Content of the dataset.}
+	\label{table:dataset}
+\end{table}
+% FIXME: pour la version finale: ajouter min/mean/max slices par volumes
+
+The dataset consists of MRI images coming from a variety of hospitals and machines across the world (such as the \textit{Centre Hospitalier Lyon-Sud, France} or \textit{ Johns Hopkins University, USA}). As a consequence our images display a large variety of protocols (see Figure [TODO]) as well as resolution and number of slices per volume. Table~\ref{table:dataset} sums up the content of our dataset.
+
+The dataset is splitted in a training set for the optimization of the weights $W$, a validation set for model selection (optimization w.r.t hyper-parameters) and a test set for model evaluation (resp. $50 \%$, $25 \%$, $25 \%$). The separation is done volume-wise to take into account intra-subject slices correlations. Volumes containing multiple classes are split by anatomical regions and can end up in different sets. This raises the difficulty of the task since, in case of overfitting, predictions will be wrong at validation or testing phases.
+% FIXME: pour la version finale: combien de volumes multi-classes ?
+We also stratified classes across sets, giving us a proportion of slices per class close to the proportion of volumes per class.
+
+Finally, each slice is subject to a unique step of preprocessing: it is resized to $128 \times 128$ pixels, a good trade-off between time constraints and quality of information.
+
+Data augmentation consists in generating 80 000 images per epoch, which is 4 times as many images as the training set. The augmentation is done by applying translations, shearing and rotations, zooming, and adding noise.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Baseline Results}
 
+TODO:
+\begin{itemize}
+    \item Baseline figure
+    \item Performance of the baseline ?
+\end{itemize}
+
+Starting from a standard VGG architecture (from~\textcite{simonyan2014}), we modified it manually until settling on the following model: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency (denoted $L$ in the rest of this paper), using stochastic gradient descent (SGD) with Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$) .
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hyper-parameter Optimization}
 
-\begin{figure}[htb]
+TODO:
+\begin{itemize}
+    \item Figure network hyper-params
+    \item Details on the optim: number of models tested, ...
+    \item Redo results
+\end{itemize}
+
+By relaxing some structural parts of our baseline architecture we define a large family of models. This parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) a convolution block comprising $b$ sections, each including $c$ convolution layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. 
+
+Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust training setting accordingly (in our case: learning rate, batch size and number of epochs, all other settings remaining identical). Moreover, using or not data augmentation is also considered, since more complex models require an increased amount of information.
+These architecture parameters and training settings form a collection of model hyper-parameters. Their respective ranges, detailed in Table~\ref{table:hyper}, were defined so as to fulfill memory (less than 12GB) and time constraints (training should last less than one day).
+
+\begin{table}
 	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_acc_time.png}
-	\label{fig:bo_acc_time}
-\end{figure}
+	\begin{tabular}{ | l | c | r | }
+		\hline
+		Name & Range & Baseline \\ \hline
+		\# blocks & $b \in [1 ; 5]$ & $5$ \\
+		\# conv. layers per block & $c \in [1 ; 7]$ & $1$ \\
+		\# filters per conv. layer & $2^{r}, r \in [2, 7]$ & $64$ \\
+		Size of the filters & $ s \in \{3 ; 5\}$ & $3$ \\
+		Learning Rate & $10^{l}, l \in [-7 ; 0]$ & $0.001$ \\
+		Batch Size & $2^{a}, a \in [2 ; 8]$ & 8 \\
+		\# epochs & $10e, e \in [1 ; 10]$ & $70$ \\
+        Data augmentation & $g \in \{\text{Yes}, \text{No}\}$ & Yes \\
+		\hline
+	\end{tabular}
+	\caption{Description of the hyper-parameter space, with their range and and the baseline value.}
+	\label{table:hyper}
+\end{table}
+
+We explored this hyper-parameter space with Bayesian optimization, as described in Section~\ref{sec:bo}. [TODO specific conditions]
+
+At the end, our optimization process yields a collection of models ranked by their performance. The quality of this assessment is naturally limited since the size of the validation set used in this respect cannot encompass the diversity of clinical reality. Cross-validation could be used to get a better estimator of the performance, but we cannot practically afford its costs. Nevertheless, best models present very similar error rates and, at the same time, a good diversity of architectures (see Figure \ref{fig:best_models_archi}) that can be leveraged. We selected the top-ten models and built a robust classifier by averaging their predictions (other combinations could be used as well).
+
+==Figure \ref{fig:best_models_archi} shows the architecture of some of the best models chosen for our ensemble. Despite the first two differing only in the number of blocks, others display variations across all hyper-parameters except data augmentation, which is always turned on. The learning rate is in a small range, either $0.0001$ or $0.001$, and the batch size is small (less than 16). Those networks tend to be deep (min. 8 convolutional layers) and the other hyper-parameters use a wide range of values.
+
+==In terms of accuracy, the ensemble is slightly better than the best model alone, however the ensemble benefits from a reduced bias.
+
+==Figure~\ref{fig:conf} shows the confusion matrices on the test set of the baseline and the ensemble of the 10 best models, demonstrating a substantial improvement on the classification of all anatomical regions. Most of the errors come from pelvis and abdomen, which was expected since the delimitation between those regions is ill-defined. In both cases pelvis is the class with the highest error.
+
+==For the volume classification, the choice of class is done by a majority vote on all slices of the volume. This gives us a higher accuracy. The ensemble misclassifies 444 slices from 71 volumes, but only 7 volumes produce errors. The misclassified slices usually correspond to the first or last one of a volume, containing little information or being nearly part of another anatomical region.
+
+\subsection{Discussion and Conclusion}
+
+TODO
+\begin{itemize}
+    \item Redo full body figure
+\end{itemize}
 
 \begin{figure}[htb]
 	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_error_time.png}
-	\label{fig:bo_error_time}
+	\includegraphics[width=.95\linewidth]{img_hyperopt/full_body_updated}
+	\caption{Slice by slice prediction on a full body volume. (Top) Prediction. (Bottom) Ground truth.}
+	\label{fig:full_body}
 \end{figure}
+
+==As an interesting example, we analyzed a full body volume by classifying each of its slices through our ensemble model. For each slice, the predicted class is the one with a probability higher than 0.7, and if no class meets this criterion, then we do not choose any. As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying the abdomen and the head. It also identifies correctly the pelvis, with some uncertainty. No class is dominant for most of the legs, however the feet are considered as spine with high probability. It also mistakenly identifies the neck as pelvis.
+
+==Those mistakes could be corrected by using a more complex decision criterion than a simple probability cutoff. We also expect that adding more anatomical regions to our dataset will allow for a better localization of the present regions.
+
+==To the problem of finding more accurate networks than handcrafted ones, we have answered with two viable strategies. Random search is as easy to implement as grid search and quickly improves on the baseline, which makes it perfect for time-constrained situations. Without this constraint and at a higher cost in implementation, an adaptive search based on Gaussian Processes explores a range of highly accurate models suited for ensembling.% The search can be started immediately in adaptive mode, as the GP will have high uncertainty everywhere, resulting in an almost uniform distribution.
+
+==For the hyper-parameters where there is a ``correct" answer, such as the learning rate (0.001) and the presence of data augmentation, the guided search quickly converges and most models inherit their values. We should remove them on further analysis and instead explore a wider range of architectures by adding hyper-parameters controlling the fully-connected layers, such as the number of units, the number of layers, adding new types of layers such as dropout and batch normalization placed across the network or even explore other learning method such as RMSProp or Adadelta. 
+
+==One limitation of the current system is that some hyper-parameters depend on the value of others. For example we are unable to choose a different number of filters per layer as the number of layers is not fixed. We also limited the range of some hyper-parameters such as the filter size so as to have networks that would fit in memory and be trained in a reasonable amount of time. Only a subset of values combinations would cause a failure. Further work could incorporate constraints on time and memory either by precise estimations when possible or by measures during training to produce estimations with a GP. 
+
+==Results on volume classification were very satisfactory. Since it is done at slice level, we have obtained a decent localization tool which shows the robustness of our ensemble. Further work will focus on adding more anatomical regions, which might require splitting slices in patches to identify smaller regions such as organs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Contribution: Combining Bayesian Optimization and Hyperband}
@@ -392,6 +545,18 @@ CAp
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Combining the methods}
+
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_acc_time.png}
+	\label{fig:bo_acc_time}
+\end{figure}
+
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_error_time.png}
+	\label{fig:bo_error_time}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Experiments on CIFAR-10}
