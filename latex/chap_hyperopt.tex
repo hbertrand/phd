@@ -198,16 +198,42 @@ We glossed over the choice of kernel until now. The most common is the one we us
 	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
 \end{equation}
 
-This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ controls the scale of the predicted output and $l$ is a vector of same dimensionality as $\mathrm{x}$ called the characteristic length-scale which measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output. 
+This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ controls the scale of the predicted output and $l$ is a vector of same dimensionality as $\mathrm{x}$ called the characteristic length-scale which measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output, as shown in Figure~\ref{fig:gp_lengthscale}.
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img_hyperopt/gp_lengthscale_small}
+        \caption{$l = 0.3$}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img_hyperopt/gp_lengthscale_big}
+        \caption{$l = 3$}
+    \end{subfigure}
+    \caption{Gaussian process posterior after six points with different length-scale. On the top with a low length-scale, data points are almost irrelevant, the Gaussian process returns to its prior almost immediately. On the bottom, the GP has a very high confidence in its prediction.}
+    \label{fig:gp_lengthscale}
+\end{figure}
 
 The samples from this kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are trying to model. In the context of Bayesian optimization, a more realistic alternative is the Matérn $5/2$ kernel
 \begin{equation}
     k(r) = \sigma^2 \left( 1 + \frac{\sqrt{5}r}{l} + \frac{5r^2}{3l^2} \right) \exp \left( - \frac{\sqrt{5}r}{l}\right)
 \end{equation}
 
-where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means the samples will be twice differentiable. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods requires twice differentiability (\textcite{snoek2012NIPS}). Figure TODO shows what samples from these kernels look like.
+where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means the samples will be twice differentiable. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods requires twice differentiability (\textcite{snoek2012NIPS}). Figure~\ref{fig:gp_matern} shows what samples from these kernels look like.
 
-[TODO fig influence of $\nu$]
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img_hyperopt/gp_matern_prior}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img_hyperopt/gp_matern_posterior}
+    \end{subfigure}
+    \caption{Gaussian process using a Matérn $5/2$ kernel. On the top, the prior. On the bottom, the posterior after fitting six points.}
+    \label{fig:gp_matern}
+\end{figure}
 
 The kernels presented have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It's very relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. Depending on the meaning of the hyper-parameters, this is not desirable. The solution is to use a non-stationary kernel, which we discuss in Section~\ref{ssec:nosta}.
 
