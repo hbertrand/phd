@@ -493,15 +493,25 @@ Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified
 
 TODO:
 \begin{itemize}
-    \item Figure network hyper-params
     \item Details on the optim: number of models tested, ...
     \item Redo results
+    \item Best networks figure ?
+    \item Confusion matrix baseline vs best vs ensemble
 \end{itemize}
 
-By relaxing some structural parts of our baseline architecture we define a large family of models. This parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) $b$ convolution block, each including $c$ convolutional layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. Moreover, the convolutions can be separable or not.
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=\linewidth]{img_hyperopt/hyperspace.pdf}
+	\caption{Variations on the baseline allowed in our search.}
+	\label{fig:hyperspace}
+\end{figure}
 
-Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust training setting accordingly (in our case: learning rate, batch size and number of epochs, all other settings remaining identical). Moreover, using or not data augmentation is also considered, since more complex models require an increased amount of information.
-These architecture parameters and training settings form a collection of model hyper-parameters. Their respective ranges, detailed in Table~\ref{table:hyper}, were defined so as to fulfill memory (less than 12GB) and time constraints (training should last less than one day).
+By relaxing some structural parts of our baseline architecture we define a large family of models. This hyper-parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) $b$ convolution block, each including $c$ convolutional layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. Moreover, the convolutions can be separable or not.
+
+Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust training setting accordingly (in our case: learning rate and batch size, all other settings remaining identical). 
+These architecture hyper-parameters and training settings form the hyper-parameter space. The ranges of those hyper-parameters, detailed in Table~\ref{table:hyper}, were defined so as to fulfill memory (less than 12GB) and time constraints (training should last less than one day).
+
+While many more hyper-parameters could have been considered, the ones we chose already define a search space of 34 300 models, well-above our capacity to fully explore. Those hyper-parameters were chosen as they were considered to have the highest impact on the performance by a mix of intuition and experience. A more systematic approach would likely yield better results, though at a greater computational cost.
 
 \begin{table}
 	\centering
@@ -521,9 +531,9 @@ These architecture parameters and training settings form a collection of model h
 	\label{table:hyper}
 \end{table}
 
-We explored this hyper-parameter space with Bayesian optimization, as described in Section~\ref{sec:bo}. [TODO specific conditions]
+To explore this hyper-parameter space, we used Bayesian optimization, as described in Section~\ref{sec:bo}. [TODO specific conditions]
 
-At the end, our optimization process yields a collection of models ranked by their performance. The quality of this assessment is naturally limited since the size of the validation set used in this respect cannot encompass the diversity of clinical reality. Cross-validation could be used to get a better estimator of the performance, but we cannot practically afford its costs. Nevertheless, best models present very similar error rates and, at the same time, a good diversity of architectures (see Figure \ref{fig:best_models_archi}) that can be leveraged. We selected the top-ten models and built a robust classifier by averaging their predictions (other combinations could be used as well).
+At the end, our optimization process yields a collection of models ranked by their performance. The quality of this assessment is naturally limited since the size of the validation set used in this respect cannot encompass the diversity of clinical reality. Cross-validation could be used to get a better estimator of the performance, but we cannot practically afford its costs. Nevertheless, best models present very similar error rates and, at the same time, a good diversity of architectures (see Figure~\ref{fig:best_models_archi}) that can be leveraged. We selected the top-ten models and built a robust classifier by averaging their predictions (other combinations could be used as well).
 
 ==Figure \ref{fig:best_models_archi} shows the architecture of some of the best models chosen for our ensemble. Despite the first two differing only in the number of blocks, others display variations across all hyper-parameters except data augmentation, which is always turned on. The learning rate is in a small range, either $0.0001$ or $0.001$, and the batch size is small (less than 16). Those networks tend to be deep (min. 8 convolutional layers) and the other hyper-parameters use a wide range of values.
 
@@ -533,7 +543,7 @@ At the end, our optimization process yields a collection of models ranked by the
 
 ==For the volume classification, the choice of class is done by a majority vote on all slices of the volume. This gives us a higher accuracy. The ensemble misclassifies 444 slices from 71 volumes, but only 7 volumes produce errors. The misclassified slices usually correspond to the first or last one of a volume, containing little information or being nearly part of another anatomical region.
 
-\subsection{Discussion and Conclusion}
+\subsection{From probabilities to a decision}
 
 TODO
 \begin{itemize}
@@ -547,9 +557,17 @@ TODO
 	\label{fig:full_body}
 \end{figure}
 
-As an interesting example, we analyzed a full body volume by classifying each of its slices through our best model. For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying all body parts, despite the slices being treated independently. Nevertheless the network struggles with the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network everytime into the pelvis class. This is likely due to the rarity of those straps in the dataset.
+Even though we made the choice of processing the data at the slice level, the slices form volumes and we are interested in a decision at the volume level. The first question is does the model classifies two successive slices similarly ? We want it to as successive slices are anatomically close and have similar structure. If the model gives very different predictions, this could be a sign that it relies on noise patterns instead of the anatomical structures.
 
-This result gives us confidence in the model as two successive slices tend to have similar predictions.
+To answer that question, we processed a full body volume by classifying each of its slices through our best model. 
+%For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. 
+As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying all body parts, despite the slices being treated independently. Nevertheless the network struggles with the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis with a high confidence. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network every time into the pelvis class. This is likely due to the rarity of those straps in the dataset.
+
+But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. Figure~\ref{fig:full_body} shows this scheme. It correctly classifies most of the slices, but some slices are not classified and the boundaries between classes are messy.
+
+A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter. This gives us Figure~\ref{fig:full_body}. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
+
+\subsection{Conclusion}
 
 ==To the problem of finding more accurate networks than handcrafted ones, we have answered with two viable strategies. Random search is as easy to implement as grid search and quickly improves on the baseline, which makes it perfect for time-constrained situations. Without this constraint and at a higher cost in implementation, an adaptive search based on Gaussian Processes explores a range of highly accurate models suited for ensembling.% The search can be started immediately in adaptive mode, as the GP will have high uncertainty everywhere, resulting in an almost uniform distribution.
 
