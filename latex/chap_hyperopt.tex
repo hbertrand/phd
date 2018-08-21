@@ -498,7 +498,7 @@ TODO:
     \item Redo results
 \end{itemize}
 
-By relaxing some structural parts of our baseline architecture we define a large family of models. This parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) a convolution block comprising $b$ sections, each including $c$ convolution layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. 
+By relaxing some structural parts of our baseline architecture we define a large family of models. This parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) $b$ convolution block, each including $c$ convolutional layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. Moreover, the convolutions can be separable or not.
 
 Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust training setting accordingly (in our case: learning rate, batch size and number of epochs, all other settings remaining identical). Moreover, using or not data augmentation is also considered, since more complex models require an increased amount of information.
 These architecture parameters and training settings form a collection of model hyper-parameters. Their respective ranges, detailed in Table~\ref{table:hyper}, were defined so as to fulfill memory (less than 12GB) and time constraints (training should last less than one day).
@@ -508,14 +508,13 @@ These architecture parameters and training settings form a collection of model h
 	\begin{tabular}{ | l | c | r | }
 		\hline
 		Name & Range & Baseline \\ \hline
-		\# blocks & $b \in [1 ; 5]$ & $5$ \\
-		\# conv. layers per block & $c \in [1 ; 7]$ & $1$ \\
-		\# filters per conv. layer & $2^{r}, r \in [2, 7]$ & $64$ \\
+		Number of blocks & $b \in [1 ; 5]$ & $5$ \\
+		Number of convolutional layers per block & $c \in [1 ; 5]$ & $1$ \\
+		Number of filters per convolutional layer & $2^{r}, r \in [2, 8]$ & $64$ \\
 		Size of the filters & $ s \in \{3 ; 5\}$ & $3$ \\
+		Separable Convolutions & $e \in \{\text{Yes}, \text{No}\}$ & No \\
 		Learning Rate & $10^{l}, l \in [-7 ; 0]$ & $0.001$ \\
 		Batch Size & $2^{a}, a \in [2 ; 8]$ & 8 \\
-		\# epochs & $10e, e \in [1 ; 10]$ & $70$ \\
-        Data augmentation & $g \in \{\text{Yes}, \text{No}\}$ & Yes \\
 		\hline
 	\end{tabular}
 	\caption{Description of the hyper-parameter space, with their range and and the baseline value.}
