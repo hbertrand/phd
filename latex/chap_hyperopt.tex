@@ -247,7 +247,7 @@ There are two ways to learn $\theta$. The first is to maximize the marginal like
 The optimization can be done with any off-the-shelf method, eventually with multiple restarts as there are no guarantee of a unique optima. 
 %For example, the scikit-learn (\textcite{pedregosa2011sklearn}) implementation uses BFGS with 10 restarts by default.
 
-The other solution is to not learn $\theta$ at all and instead marginalize the hyper-parameters, i.e. at inference compute 
+The other solution is to not learn $\theta$ at all and instead marginalize the hyper-parameters, i.e. at inference compute:
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
     = \int p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right) p \left( \theta | \mathrm{X}, \mathrm{y} \right) d\theta
@@ -416,7 +416,6 @@ This section describes and extend work that was presented at ISBI 2017.
 
 TODO:
 \begin{itemize}
-    \item Update table
     \item Pick better images from the dataset
 \end{itemize}
 
@@ -448,37 +447,46 @@ Given an MRI volume we would like to know which anatomical region are contained 
 	\begin{tabular}{ | l | c | r | }
 		\hline
 		Body Part & \# Volumes & \# Slices \\ \hline
-		Head & 301 & 9032 \\
-		Abdomen & 282 & 11532 \\
-		Pelvis & 225 & 8854 \\
-		Spine & 386 & 7732 \\
+		Head & 404 & 17011 \\
+		Chest & 186 & 6897 \\
+		Abdomen & 367 & 15486 \\
+		Pelvis & 351 & 17962 \\
+		Legs & 99 & 12868 \\
+		Spine & 390 & 9790 \\
 		\hline
 	\end{tabular}
 	\caption{Content of the dataset.}
 	\label{table:dataset}
 \end{table}
-% FIXME: pour la version finale: ajouter min/mean/max slices par volumes
 
-The dataset consists of MRI images coming from a variety of hospitals and machines across the world (such as the \textit{Centre Hospitalier Lyon-Sud, France} or \textit{ Johns Hopkins University, USA}). As a consequence our images display a large variety of protocols (see Figure [TODO]) as well as resolution and number of slices per volume. Table~\ref{table:dataset} sums up the content of our dataset.
+The dataset consists of MRI images coming from a variety of hospitals and machines across the world (such as the \textit{Centre Hospitalier Lyon-Sud, France} or \textit{ Johns Hopkins University, USA}). As a consequence our images display a large variety of protocols (see Figure~\ref{fig:abdomens}) as well as resolution, number of volumes per class and number of slices per volume. Table~\ref{table:dataset} sums up the content of our dataset.
 
-The dataset is splitted in a training set for the optimization of the weights $W$, a validation set for model selection (optimization w.r.t hyper-parameters) and a test set for model evaluation (resp. $50 \%$, $25 \%$, $25 \%$). The separation is done volume-wise to take into account intra-subject slices correlations. Volumes containing multiple classes are split by anatomical regions and can end up in different sets. This raises the difficulty of the task since, in case of overfitting, predictions will be wrong at validation or testing phases.
-% FIXME: pour la version finale: combien de volumes multi-classes ?
-We also stratified classes across sets, giving us a proportion of slices per class close to the proportion of volumes per class.
+The dataset is splitted in a training set for the optimization of the weights of the networks, a validation set for model selection (optimization w.r.t hyper-parameters) and a test set for model evaluation (resp. $50 \%$, $25 \%$, $25 \%$). The separation is done volume-wise to take into account intra-subject slices correlations. Volumes containing multiple classes are split by anatomical regions and can end up in different sets. This raises the difficulty of the task since, in case of overfitting, predictions will be wrong at validation or testing phases.
+
+%We also stratified classes across sets, giving us a proportion of slices per class close to the proportion of volumes per class.
 
 Finally, each slice is subject to a unique step of preprocessing: it is resized to $128 \times 128$ pixels, a good trade-off between time constraints and quality of information.
 
-Data augmentation consists in generating 80 000 images per epoch, which is 4 times as many images as the training set. The augmentation is done by applying translations, shearing and rotations, zooming, and adding noise.
+Data augmentation is used and consists in generating 80 000 images per epoch. The augmentation is done by applying translations, shearing and rotations, zooming, and adding Gaussian noise.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Baseline Results}
 
 TODO:
 \begin{itemize}
-    \item Baseline figure
     \item Performance of the baseline ?
 \end{itemize}
 
-Starting from a standard VGG architecture (from~\textcite{simonyan2014}), we modified it manually until settling on the following model: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency (denoted $L$ in the rest of this paper), using stochastic gradient descent (SGD) with Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$) .
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=\linewidth]{img_hyperopt/convnet.pdf}
+	\caption{Baseline network used to solve the problem.}
+	\label{fig:baseline}
+\end{figure}
+
+Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified it manually until settling on the following model, shown in Figure~\ref{fig:baseline}: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency, using stochastic gradient descent (SGD) with Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$).
+
+[TODO performance]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hyper-parameter Optimization}
@@ -535,14 +543,14 @@ TODO
 
 \begin{figure}[htb]
 	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/full_body_updated}
+	\includegraphics[width=.95\linewidth]{img_hyperopt/full_body}
 	\caption{Slice by slice prediction on a full body volume. (Top) Prediction. (Bottom) Ground truth.}
 	\label{fig:full_body}
 \end{figure}
 
-==As an interesting example, we analyzed a full body volume by classifying each of its slices through our ensemble model. For each slice, the predicted class is the one with a probability higher than 0.7, and if no class meets this criterion, then we do not choose any. As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying the abdomen and the head. It also identifies correctly the pelvis, with some uncertainty. No class is dominant for most of the legs, however the feet are considered as spine with high probability. It also mistakenly identifies the neck as pelvis.
+As an interesting example, we analyzed a full body volume by classifying each of its slices through our best model. For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying all body parts, despite the slices being treated independently. Nevertheless the network struggles with the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network everytime into the pelvis class. This is likely due to the rarity of those straps in the dataset.
 
-==Those mistakes could be corrected by using a more complex decision criterion than a simple probability cutoff. We also expect that adding more anatomical regions to our dataset will allow for a better localization of the present regions.
+This result gives us confidence in the model as two successive slices tend to have similar predictions.
 
 ==To the problem of finding more accurate networks than handcrafted ones, we have answered with two viable strategies. Random search is as easy to implement as grid search and quickly improves on the baseline, which makes it perfect for time-constrained situations. Without this constraint and at a higher cost in implementation, an adaptive search based on Gaussian Processes explores a range of highly accurate models suited for ensembling.% The search can be started immediately in adaptive mode, as the GP will have high uncertainty everywhere, resulting in an almost uniform distribution.
 
