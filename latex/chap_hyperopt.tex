@@ -472,11 +472,6 @@ Data augmentation is used and consists in generating 80 000 images per epoch. Th
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Baseline Results}
 
-TODO:
-\begin{itemize}
-    \item Performance of the baseline ?
-\end{itemize}
-
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/baseline.pdf}
@@ -484,16 +479,41 @@ TODO:
 	\label{fig:baseline}
 \end{figure}
 
-Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified it manually until settling on the following model, shown in Figure~\ref{fig:baseline}: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency, using stochastic gradient descent (SGD) with Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$).
+Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified it manually until settling on the following model, shown in Figure~\ref{fig:baseline}: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency, using stochastic gradient descent (SGD) with a learning rate of $10^{-3}$, Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$) for 30 epoch.
 
-[TODO performance]
+\begin{table}
+    \centering
+    \newcommand\items{6}   %Number of classes
+    \arrayrulecolor{white} %Table line colors
+    \noindent\begin{tabular}{cc*{\items}{|E}|}
+    \multicolumn{1}{c}{} &\multicolumn{1}{c}{} &\multicolumn{\items}{c}{\textbf{Predicted}} \\ \hhline{~*\items{|-}|}
+    \multicolumn{1}{c}{} & 
+    \multicolumn{1}{c}{} & 
+    \multicolumn{1}{c}{\rot{Head}} & 
+    \multicolumn{1}{c}{\rot{Chest}} & 
+    \multicolumn{1}{c}{\rot{Abdomen}} &
+    \multicolumn{1}{c}{\rot{Pelvis}} & 
+    \multicolumn{1}{c}{\rot{Legs}} & 
+    \multicolumn{1}{c}{\rot{Spine}} \\ \hhline{~*\items{|-}|}
+    \multirow{\items}{*}{\rotatebox{90}{\textbf{Actual}}} 
+    &Head  & 96 & 0 & 1 & 2 & 1 & 0   \\ \hhline{~*\items{|-}|}
+    &Chest  & 1 & 57 & 13 & 28 & 1 & 0   \\ \hhline{~*\items{|-}|}
+    &Abdomen  & 0 & 1 & 88 & 10 & 0 & 1   \\ \hhline{~*\items{|-}|}
+    &Pelvis  & 1 & 0 & 9 & 81 & 8 & 1   \\ \hhline{~*\items{|-}|}
+    &Legs  & 0 & 0 & 0 & 19 & 81 & 0   \\ \hhline{~*\items{|-}|}
+    &Spine  & 0 & 1 & 3 & 2 & 0 & 94   \\ \hhline{~*\items{|-}|}
+    \end{tabular}
+    \caption{Confusion matrix for the baseline on the test set, in percent.}
+	\label{table:conf_matrix_baseline}
+\end{table}
+
+We achieve a $14 \%$ error rate with most of the error focused on the chest. Examining the confusion matrix (Table~\ref{table:conf_matrix_baseline}), we note that the abdomen, pelvis and legs classes have most of their errors located at the boundaries between the classes. These errors make sense as these boundaries are ill-defined and varies from one volume to the next. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hyper-parameter Optimization}
 
 TODO:
 \begin{itemize}
-    \item Details on the optim: number of models tested, ...
     \item Redo results
     \item Best networks figure ?
     \item Confusion matrix baseline vs best vs ensemble
@@ -515,6 +535,7 @@ While many more hyper-parameters could have been considered, the ones we chose a
 
 \begin{table}
 	\centering
+	\arrayrulecolor{black}
 	\begin{tabular}{ | l | c | r | }
 		\hline
 		Name & Range & Baseline \\ \hline
@@ -531,29 +552,60 @@ While many more hyper-parameters could have been considered, the ones we chose a
 	\label{table:hyper}
 \end{table}
 
-To explore this hyper-parameter space, we used Bayesian optimization, as described in Section~\ref{sec:bo}. [TODO specific conditions]
+To explore this hyper-parameter space, we used Bayesian optimization, as described in Section~\ref{sec:bo}. Every network was trained for 30 epochs, and we trained a total of 300 models. We chose the Expected Improvement as our acquisition function, and we used the loss on the validation set as the value the Gaussian process must predict. The first model picked by the Bayesian optimization is usually chosen randomly, here it made sense to start from the baseline as it was already trained.
+
+% \begin{table}
+%     \centering
+%     \newcommand\items{6}   %Number of classes
+%     \arrayrulecolor{white} %Table line colors
+%     \noindent\begin{tabular}{cc*{\items}{|E}|}
+%     \multicolumn{1}{c}{} &\multicolumn{1}{c}{} &\multicolumn{\items}{c}{\textbf{Predicted}} \\ \hhline{~*\items{|-}|}
+%     \multicolumn{1}{c}{} & 
+%     \multicolumn{1}{c}{} & 
+%     \multicolumn{1}{c}{\rot{Head}} & 
+%     \multicolumn{1}{c}{\rot{Chest}} & 
+%     \multicolumn{1}{c}{\rot{Abdomen}} &
+%     \multicolumn{1}{c}{\rot{Pelvis}} & 
+%     \multicolumn{1}{c}{\rot{Legs}} & 
+%     \multicolumn{1}{c}{\rot{Spine}} \\ \hhline{~*\items{|-}|}
+%     \multirow{\items}{*}{\rotatebox{90}{\textbf{Actual}}} 
+%     &Head  & 96 & 0 & 1 & 2 & 1 & 0   \\ \hhline{~*\items{|-}|}
+%     &Chest  & 1 & 57 & 13 & 28 & 1 & 0   \\ \hhline{~*\items{|-}|}
+%     &Abdomen  & 0 & 1 & 88 & 10 & 0 & 1   \\ \hhline{~*\items{|-}|}
+%     &Pelvis  & 1 & 0 & 9 & 81 & 8 & 1   \\ \hhline{~*\items{|-}|}
+%     &Legs  & 0 & 0 & 0 & 19 & 81 & 0   \\ \hhline{~*\items{|-}|}
+%     &Spine  & 0 & 1 & 3 & 2 & 0 & 94   \\ \hhline{~*\items{|-}|}
+%     \end{tabular}
+%     \caption{Confusion matrix for the best model on the test set, in percent.}
+% 	\label{table:conf_matrix_best}
+% \end{table}
 
 At the end, our optimization process yields a collection of models ranked by their performance. The quality of this assessment is naturally limited since the size of the validation set used in this respect cannot encompass the diversity of clinical reality. Cross-validation could be used to get a better estimator of the performance, but we cannot practically afford its costs. Nevertheless, best models present very similar error rates and, at the same time, a good diversity of architectures (see Figure~\ref{fig:best_models_archi}) that can be leveraged. We selected the top-ten models and built a robust classifier by averaging their predictions (other combinations could be used as well).
 
-==Figure \ref{fig:best_models_archi} shows the architecture of some of the best models chosen for our ensemble. Despite the first two differing only in the number of blocks, others display variations across all hyper-parameters except data augmentation, which is always turned on. The learning rate is in a small range, either $0.0001$ or $0.001$, and the batch size is small (less than 16). Those networks tend to be deep (min. 8 convolutional layers) and the other hyper-parameters use a wide range of values.
+[TODO describe results]
 
-==In terms of accuracy, the ensemble is slightly better than the best model alone, however the ensemble benefits from a reduced bias.
+Best model has a $3 \%$ error rate.
 
-==Figure~\ref{fig:conf} shows the confusion matrices on the test set of the baseline and the ensemble of the 10 best models, demonstrating a substantial improvement on the classification of all anatomical regions. Most of the errors come from pelvis and abdomen, which was expected since the delimitation between those regions is ill-defined. In both cases pelvis is the class with the highest error.
+% ==Figure \ref{fig:best_models_archi} shows the architecture of some of the best models chosen for our ensemble. Despite the first two differing only in the number of blocks, others display variations across all hyper-parameters except data augmentation, which is always turned on. The learning rate is in a small range, either $0.0001$ or $0.001$, and the batch size is small (less than 16). Those networks tend to be deep (min. 8 convolutional layers) and the other hyper-parameters use a wide range of values.
 
-==For the volume classification, the choice of class is done by a majority vote on all slices of the volume. This gives us a higher accuracy. The ensemble misclassifies 444 slices from 71 volumes, but only 7 volumes produce errors. The misclassified slices usually correspond to the first or last one of a volume, containing little information or being nearly part of another anatomical region.
+% ==In terms of accuracy, the ensemble is slightly better than the best model alone, however the ensemble benefits from a reduced bias.
+
+% ==Figure~\ref{fig:conf} shows the confusion matrices on the test set of the baseline and the ensemble of the 10 best models, demonstrating a substantial improvement on the classification of all anatomical regions. Most of the errors come from pelvis and abdomen, which was expected since the delimitation between those regions is ill-defined. In both cases pelvis is the class with the highest error.
+
+% ==For the volume classification, the choice of class is done by a majority vote on all slices of the volume. This gives us a higher accuracy. The ensemble misclassifies 444 slices from 71 volumes, but only 7 volumes produce errors. The misclassified slices usually correspond to the first or last one of a volume, containing little information or being nearly part of another anatomical region.
 
 \subsection{From probabilities to a decision}
 
 TODO
 \begin{itemize}
-    \item Redo full body figure
+    \item Full body plot: put correct curves
+    \item Describe complex decision scheme
 \end{itemize}
 
-\begin{figure}[htb]
+\begin{figure}[htbp]
 	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/full_body}
-	\caption{Slice by slice prediction on a full body volume. (Top) Prediction. (Bottom) Ground truth.}
+	\includegraphics[width=\linewidth]{img_hyperopt/fullbody}
+	\caption{\textcolor{red}{CURVES DON'T MATCH IMAGE, TO BE FIXED} Slice by slice prediction on a full body volume. (a) Image and ground truth. (b) Raw model prediction. (c) After smoothing. (d) After selecting the best transitions.}
 	\label{fig:full_body}
 \end{figure}
 
@@ -563,22 +615,27 @@ To answer that question, we processed a full body volume by classifying each of 
 %For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. 
 As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying all body parts, despite the slices being treated independently. Nevertheless the network struggles with the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis with a high confidence. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network every time into the pelvis class. This is likely due to the rarity of those straps in the dataset.
 
-But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. Figure~\ref{fig:full_body} shows this scheme. It correctly classifies most of the slices, but some slices are not classified and the boundaries between classes are messy.
+But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), the scheme would give regions broken in multiple parts and messy boundaries.
 
-A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter. This gives us Figure~\ref{fig:full_body}. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
+A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter. This gives us Figure~\ref{fig:full_body}-c. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
+
+[TODO finish describing decision scheme]
 
 \subsection{Conclusion}
 
-==To the problem of finding more accurate networks than handcrafted ones, we have answered with two viable strategies. Random search is as easy to implement as grid search and quickly improves on the baseline, which makes it perfect for time-constrained situations. Without this constraint and at a higher cost in implementation, an adaptive search based on Gaussian Processes explores a range of highly accurate models suited for ensembling.% The search can be started immediately in adaptive mode, as the GP will have high uncertainty everywhere, resulting in an almost uniform distribution.
+We have shown how to use Bayesian optimization to the concrete problem of MR FOV classification. The gain in performance between our handcrafted model and the best model clearly shows the value of automating the search of hyper-parameters, even with a limited budget.
 
-==For the hyper-parameters where there is a ``correct" answer, such as the learning rate (0.001) and the presence of data augmentation, the guided search quickly converges and most models inherit their values. We should remove them on further analysis and instead explore a wider range of architectures by adding hyper-parameters controlling the fully-connected layers, such as the number of units, the number of layers, adding new types of layers such as dropout and batch normalization placed across the network or even explore other learning method such as RMSProp or Adadelta. 
+The search was vulnerable to all the weaknesses of Bayesian optimization: the process was sequential (only one model trained at a time), we were limited in the hyper-parameters we could use (no conditional hyper-parameters) and the kernel was stationary. As presented in Section~\ref{ssec:nosta}, work has been done on all those limitations and should be incorporated to improve the process. Other search methods could also be used, such as Hyperband (Section~\ref{sec:cap}). 
 
-==One limitation of the current system is that some hyper-parameters depend on the value of others. For example we are unable to choose a different number of filters per layer as the number of layers is not fixed. We also limited the range of some hyper-parameters such as the filter size so as to have networks that would fit in memory and be trained in a reasonable amount of time. Only a subset of values combinations would cause a failure. Further work could incorporate constraints on time and memory either by precise estimations when possible or by measures during training to produce estimations with a GP. 
+Another problem encountered is how to deal with models that cannot be trained (because they require too much memory for example). Not putting them in the training set will just let the search pick other similar models, but putting an arbitrarily high value is not ideal either as the Gaussian process will smoothly interpolate to that value, even though there is a discontinuity in that region (a model that can or cannot be trained, it's binary, not a smooth transition).
 
-==Results on volume classification were very satisfactory. Since it is done at slice level, we have obtained a decent localization tool which shows the robustness of our ensemble. Further work will focus on adding more anatomical regions, which might require splitting slices in patches to identify smaller regions such as organs.
+Regarding the final models, testing at the volume level has shown that the models are robust and can generalize. Still, the neural network was not enough to obtain smooth coherent predictions, and we presented a decision scheme to fix that.
+
+Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. The model could also be improved by using a cyclic learning rate, spatial dropout on the convolutional layers or replacing the fully-connected layers with convolutional layers.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Contribution: Combining Bayesian Optimization and Hyperband}
+\label{sec:cap}
 
 CAp
 

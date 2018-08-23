@@ -5,7 +5,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[style=authoryear, citestyle=authoryear, doi=false, url=false, isbn=false]{biblatex}
 \usepackage{minitoc}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{amssymb,amsmath}
 \usepackage{graphicx}
 \usepackage{dsfont}
@@ -91,6 +91,26 @@
 
 % Text spacing
 \renewcommand{\baselinestretch}{1.2}
+
+% Confusion matrix
+% https://tex.stackexchange.com/questions/20267/how-to-construct-a-confusion-matrix-in-latex
+\usepackage{collcell}
+\usepackage{hhline}
+\usepackage{pgf}
+\usepackage{multirow}
+
+\def\colorModel{hsb} %You can use rgb or hsb
+
+\newcommand\ColCell[1]{
+  \pgfmathparse{#1<50?1:0}  %Threshold for changing the font color into the cells
+    \ifnum\pgfmathresult=0\relax\color{white}\fi
+  \pgfmathsetmacro\compA{0}      %Component R or H
+  \pgfmathsetmacro\compB{#1/100} %Component G or S
+  \pgfmathsetmacro\compC{1}      %Component B or B
+  \edef\x{\noexpand\centering\noexpand\cellcolor[\colorModel]{\compA,\compB,\compC}}\x #1
+  } 
+\newcolumntype{E}{>{\collectcell\ColCell}m{0.4cm}<{\endcollectcell}}  %Cell width
+\newcommand*\rot{\rotatebox{90}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
