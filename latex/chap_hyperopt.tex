@@ -17,9 +17,9 @@
 
 Plan: split generic/deep learning or by class of methods ?
 
-==The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to try all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable in practice.
+==The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable in practice.
 
-==In practice, as it is usually impossible to prove the optimality of a solution without trying them all, the accepted solution is the best found in the budget allocated by the user to the search.
+==In practice, as it is usually impossible to prove the optimality of a solution without testing them all, the accepted solution is the best found in the budget allocated by the user to the search.
 
 ==Even though this problem appears in all kinds of situation, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
 
@@ -73,7 +73,7 @@ Large scale evolution
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other approaches}
 
-==In the context of deep learning, the problem can be seen as a multi-armed bandit. The idea is to evaluate the models as soon as possible and discard the unpromising ones without wasting more time training them. The time gained can then be spent trying more models. Section~\ref{ssec:hyperband} describes an algorithm using this concept.
+==In the context of deep learning, the problem can be seen as a multi-armed bandit. The idea is to evaluate the models as soon as possible and discard the unpromising ones without wasting more time training them. The time gained can then be spent testing more models. Section~\ref{ssec:hyperband} describes an algorithm using this concept.
 
 Bandit: Hyperband~\textcite{li2017ICLR}
 
@@ -90,23 +90,23 @@ Can we unify all those approaches in the same framework ?
 \section{Bayesian Optimization}
 \label{sec:bo}
 
-Bayesian Optimization is a method for optimizing the parameters of a black-box that is costly to evaluate. In deep learning the black-box is a neural network and the parameters are the hyper-parameters of the network. Evaluating it corresponds to training the network and computing the performance on the validation set. A recent and general review of the topic can be found in~\textcite{shahriari2016IEEE} where it is treated as an optimization method, while~\textcite{snoek2012NIPS} review the topic in the context of optimizing the hyper-parameters of machine learning models.
+Bayesian Optimization is a method for optimizing the parameters of a black-box that is costly to evaluate. In deep learning the black-box is a neural network and the parameters are the hyper-parameters of the network. Evaluating the network corresponds to training it and computing its performance on the validation set. A recent and general review of the topic can be found in~\textcite{shahriari2016IEEE} where it is treated as an optimization method, while~\textcite{snoek2012NIPS} review the topic in the context of optimizing the hyper-parameters of machine learning models.
 
-There are two components to Bayesian Optimization. First is a probabilistic model of the loss function, i.e. a function that takes the values of the hyper-parameters as input and estimate the value of the loss the corresponding neural network would have. Our model of choice is Gaussian processes which we present in Section~\ref{ssec:gp}. The second component, called the acquisition function, samples the model of the loss function to select the next set of hyper-parameters to evaluate. Common acquisition functions are presented in Section~\ref{ssec:acqfunc}.
+There are two components to Bayesian Optimization. The first component is a probabilistic model of the loss function, i.e. a function that takes the values of the hyper-parameters as input and estimate the value of the loss the corresponding neural network would have. Our model of choice is Gaussian processes which we present in Section~\ref{ssec:gp}. While other models are available, such as tree-structured Parzen estimators (\textcite{bergstra2011NIPS}), they offer a different set of advantages and weaknesses which we discuss in Section~\ref{ssec:practical}. The second component, called the acquisition function, samples the model of the loss function to select the next set of hyper-parameters to evaluate. Common acquisition functions are presented in Section~\ref{ssec:acqfunc}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Gaussian Processes}
 \label{ssec:gp}
 
-A Gaussian process is a supervised learning model mainly used for regression problems. It is a distribution over functions, i.e. from a set of data points, the Gaussian process gives us possible functions that fit those points, weighted by their likelihood. The shape and properties of possible functions are defined by a covariance function. When predicting the value of an unseen point, the Gaussian process returns a Normal distribution, with the variance an estimation of the uncertainty of the model at this point. Predicting multiple points will result in a joint Gaussian distribution.
+A Gaussian process is a supervised learning model mainly used for regression problems. It is a distribution over functions, i.e. from a set of data points, the Gaussian process gives us possible functions that fit those points, weighted by their likelihood. The shape and properties of possible functions are defined by a covariance function. When predicting the value of an unseen point, the Gaussian process returns a Normal distribution, with the variance being an estimation of the uncertainty of the model at this point. Predicting multiple points will result in a joint Gaussian distribution.
 
-Following the notation of~\textcite{rasmussen2005}, we write the Gaussian process as
+Following the notation of~\textcite{rasmussen2005}, we write the Gaussian process as:
 
 \begin{equation}
-    \mathrm{y}(\mathrm{x}) \sim \mathcal{GP} \left( m(\mathrm{x}), k(\mathrm{x}, \mathrm{x'}) \right)
+    \mathrm{y}(\mathrm{x}) \sim \mathcal{GP} \left( m(\mathrm{x}), k(\mathrm{x}, \mathrm{x}) \right)
 \end{equation}
 
-where $m(\mathrm{x})$ is the mean function which we set to $0$ for simplicity (in practice, just remove the mean of the predicted values from your dataset), and $k(\mathrm{x}, \mathrm{x'})$ is the covariance function which specifies the covariance between pair of data points. From this function we can build the covariance matrix of a set $\mathrm{X}$ of $N$ data points as
+$m(\mathrm{x})$ is the mean function and $k(\mathrm{x}, \mathrm{x'})$ is the covariance function which specifies the covariance between pair of data points. The mean function is set to $0$ for simplicity. In practice this can be ensured by removing the mean of the predicted values from the dataset. The covariance function is used to build the covariance matrix of a set $\mathrm{X}$ of $N$ data points as:
 
 \begin{equation}
     K(\mathrm{X}, \mathrm{X}) = 
@@ -126,22 +126,21 @@ This matrix is all we need to draw samples from the distribution. We pick a set 
 
 Some such samples are shown in Figure~\ref{fig:gp_prior}. The covariance function chosen for now is the squared exponential kernel:
 \begin{equation}
-	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
+	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2^2}{2l^2}\right)
+	\label{eq:sqexp}
 \end{equation}
 Other kernels and their properties are discussed later. 
-
-Back to Figure~\ref{fig:gp_prior}, the thick blue line represents the mean of the distribution and the blue area around is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$). 
 
 %The covariance matrix is a Gram matrix, meaning it is positive semi-definite, i.e. it admits a unique Cholesky decomposition
 
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/gp_prior.png}
-	\caption{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process.}
+	\caption{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process. The thick blue line represents the mean of the distribution and the blue area around is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$)}
 	\label{fig:gp_prior}
 \end{figure}
 
-In probabilistic terms, this corresponds to the prior. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*}, \theta \right)$ ($\theta$ are the hyper-parameters of the model which we will deal with later). We are interested in the posterior $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is
+In probabilistic terms, the unfitted Gaussian process corresponds to the prior $p \left( \mathrm{y} \right)$. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*}, \theta \right)$ ($\theta$ are the hyper-parameters of the model which we will deal with later). We are interested in the posterior $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is:
 
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
@@ -149,7 +148,7 @@ In probabilistic terms, this corresponds to the prior. Given a set of observed p
     \frac{p\left( \mathrm{y}, \mathrm{y_*} | \mathrm{X}, \mathrm{X_*}, \theta \right)}{p\left( \mathrm{y} | \mathrm{X}, \theta \right)}
 \end{equation}
 
-The numerator is called the joint distribution and the denominator is the marginal likelihood. First, we compute the joint distribution
+The numerator is called the joint distribution and the denominator is the marginal likelihood. First, we compute the joint distribution:
 
 \begin{equation}
     \begin{bmatrix}
@@ -165,9 +164,9 @@ The numerator is called the joint distribution and the denominator is the margin
     \right)
 \end{equation}
 
-Training a Gaussian process simply means pre-computing $K(\mathrm{X}, \mathrm{X})$, i.e. the covariance between the data points. At inference, we compute the covariance $K(\mathrm{X_*}, \mathrm{X_*})$ between the points we want to predict, and the covariance between the points we have observed and the points we want to predict $K(\mathrm{X}, \mathrm{X_*})$. And since the covariance matrix must be symmetrical, $K(\mathrm{X_*}, \mathrm{X}) = K(\mathrm{X}, \mathrm{X_*})^T$. For notational simplicity we will denote them $K$, $K_*$ or $K_*^T$ and $K_{**}$.
+Training a Gaussian process simply means pre-computing $K(\mathrm{X}, \mathrm{X})$, i.e. the covariance between the data points. At inference, we compute the covariance $K(\mathrm{X_*}, \mathrm{X_*})$ between the points we want to predict, and the covariance between the points we have observed and the points we want to predict $K(\mathrm{X}, \mathrm{X_*})$. And since the covariance matrix is symmetrical, $K(\mathrm{X_*}, \mathrm{X}) = K(\mathrm{X}, \mathrm{X_*})^T$. For notational simplicity we will denote them $K$, $K_*$ or $K_*^T$ and $K_{**}$.
 
-But the joint distribution isn't enough, it will generate functions that do not match the observed data. The posterior is obtained by conditioning the joint distribution to the observations, and because every term involved is a Gaussian distribution, there is a well-known result giving us the following equation
+But the joint distribution is not enough, it will generate functions that do not match the observed data. The posterior is obtained by conditioning the joint distribution to the observations, and because every term involved is a Gaussian distribution, the posterior can be simplified to the following equation:
 
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
@@ -175,6 +174,8 @@ But the joint distribution isn't enough, it will generate functions that do not 
     \mathcal{N} \left( K_* K^{-1} y, 
     K_{**} - K_* K^{-1} K_*^T \right)
 \end{equation}
+
+This is the equation to compute when predicting new points. Most of the cost of the computation is in inverting the covariance matrix. By construction it is always positive semi-definite and is positive definite if its rows and columns are linearly independent. This is always true in the context of Bayesian optimization as long as the points in the training set are unique. Therefore the covariance matrix admits a unique Cholesky decomposition which is faster to compute and invert than directly computing the inverse of the covariance matrix. 
 
 \begin{figure}[htb]
     \centering
@@ -185,18 +186,15 @@ But the joint distribution isn't enough, it will generate functions that do not 
     \begin{subfigure}[b]{\textwidth}
         \includegraphics[width=\textwidth]{img_hyperopt/gp_posterior_6_point}
     \end{subfigure}
-    \caption{Gaussian process posterior after fitting one point on top, six on the bottom. Notice how all the samples now go through those points and how the variance is lower close to them.}
+    \caption{Gaussian process posterior after fitting one point on top, six on the bottom. All the samples pass through those points and the variance is lower close to them.}
     \label{fig:gp_posterior}
 \end{figure}
 
-Figure~\ref{fig:gp_posterior} shows what samples from this distribution looks like on a one dimensional problem. Each sample must go through every observed point, and the closer the points are, the less freedom the samples have to change. We also observe that outside of the range of points, the distribution quickly reverts to its prior. This is a property of this kernel, which is ill-suited for extrapolation.
+Figure~\ref{fig:gp_posterior} shows how samples from this distribution look like on a one dimensional problem. Each sample must go through every observed point, and the closer the points are, the less freedom the samples have to change. Outside of the range of observed points, the distribution quickly reverts to its prior. This is a property of this kernel, where the influence of a point on the value of another decays exponentially with their relative distance.
 
-So far we have assumed for simplification that the data is noise-free, however it is important to note that Gaussian processes are particularly well-adapted at dealing with noisy data. See~\textcite{rasmussen2005} for the changes to the equations.
+So far we have assumed for simplification that the data is noise-free, however it is important to note that Gaussian processes are particularly well-adapted for dealing with noisy data. See~\textcite{rasmussen2005} for the changes to the equations.
 
-We glossed over the choice of kernel until now. The most common is the one we used so far, the squared exponential kernel
-\begin{equation}
-	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2}{2l^2}\right)
-\end{equation}
+We glossed over the choice of kernel until now. The most common is the one we used so far, the squared exponential kernel of Equation~\ref{eq:sqexp}.
 
 This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ controls the scale of the predicted output and $l$ is a vector of same dimensionality as $\mathrm{x}$ called the characteristic length-scale which measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output, as shown in Figure~\ref{fig:gp_lengthscale}.
 
@@ -215,12 +213,12 @@ This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ c
     \label{fig:gp_lengthscale}
 \end{figure}
 
-The samples from this kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are trying to model. In the context of Bayesian optimization, a more realistic alternative is the Matérn $5/2$ kernel
+The samples from this kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are modelling. In the context of Bayesian optimization, and noting $r = || \mathrm{x} - \mathrm{x'} ||_2$, a more realistic alternative is the Matérn $5/2$ kernel:
 \begin{equation}
     k(r) = \sigma^2 \left( 1 + \frac{\sqrt{5}r}{l} + \frac{5r^2}{3l^2} \right) \exp \left( - \frac{\sqrt{5}r}{l}\right)
 \end{equation}
 
-where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means the samples will be twice differentiable. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods requires twice differentiability (\textcite{snoek2012NIPS}). Figure~\ref{fig:gp_matern} shows what samples from these kernels look like.
+The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. The hyper-parameters $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means that the samples will be twice differentiable, $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $\nu = 5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods require twice differentiability (\textcite{snoek2012NIPS}). Figure~\ref{fig:gp_matern} shows what samples from these kernels look like.
 
 \begin{figure}[htb]
     \centering
@@ -235,19 +233,19 @@ where $r = \mathrm{x} - \mathrm{x'}$. The Matérn covariance functions are a cla
     \label{fig:gp_matern}
 \end{figure}
 
-The kernels presented have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It's very relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. Depending on the meaning of the hyper-parameters, this is not desirable. The solution is to use a non-stationary kernel, which we discuss in Section~\ref{ssec:nosta}.
+The presented kernels have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It is particularly relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. Depending on the meaning of the hyper-parameters, this is not desirable. A solution is to use a non-stationary kernel, which we discuss in Section~\ref{ssec:nosta}.
 
-Another problem of those kernels is that they have themselves hyper-parameters $\theta$ which needs to be chosen. As said before, $l$ is the characteristic length-scale. By construction of those covariance functions and as shown in~\textcite{neal1996phd}, the inverse of the length-scale determines how relevant an input is. In the context of hyper-parameter optimization, it can help us choose which hyper-parameters to tune carefully. It is therefore very important to select the correct value for $l$. 
+Another problem of those kernels is that they have themselves hyper-parameters $\theta$ which need to be chosen. As said before, $l$ is the characteristic length-scale. By construction of those covariance functions, and as shown by~\textcite{neal1996phd}, the inverse of the length-scale determines how relevant an input is. In the context of hyper-parameter optimization, it can help to choose which hyper-parameters to tune carefully. It is therefore very important to select the correct value for $l$. 
 
-There are two ways to learn $\theta$. The first is to maximize the marginal likelihood, which can be derived to  
+There are two ways to learn $\theta$. The first way is to maximize the marginal likelihood, which can be derived as:  
 \begin{equation}
 	\log p\left(\mathrm{y} | \mathrm{X}, \theta \right) = - \frac{1}{2} \mathrm{y}^T K^{-1} \mathrm{y} - \frac{1}{2} \log |K| - \frac{n}{2} \log 2 \pi
 \end{equation}
 
-The optimization can be done with any off-the-shelf method, eventually with multiple restarts as there are no guarantee of a unique optima. 
+The optimization can be done with any off-the-shelf method, eventually with multiple restarts as there are no guarantee of a unique optimum. 
 %For example, the scikit-learn (\textcite{pedregosa2011sklearn}) implementation uses BFGS with 10 restarts by default.
 
-The other solution is to not learn $\theta$ at all and instead marginalize the hyper-parameters, i.e. at inference compute:
+The other solution is to not learn $\theta$ at all and instead marginalize the hyper-parameters, i.e. at the inference step compute:
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
     = \int p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right) p \left( \theta | \mathrm{X}, \mathrm{y} \right) d\theta
@@ -255,7 +253,7 @@ The other solution is to not learn $\theta$ at all and instead marginalize the h
 
 This integral is usually intractable but can be approximated by sampling methods. \textcite{murray2010NIPS} use slice sampling, \textcite{garbuno2016CSDA} use asymptotically independent Markov sampling and \textcite{titsias2011} review different Monte Carlo methods used for this problem.
 
-For a more extensive treatment on Gaussian Processes, see~\textcite{rasmussen2005}.
+For a more extensive description of Gaussian Processes, see~\textcite{rasmussen2005}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Acquisition Functions}
@@ -267,18 +265,16 @@ TODO:
     \item Should I talk about other functions, even if we didn't use them ? (Upper Confidence Bound, Thompson Sampling, Entropy-search Portfolio)
 \end{itemize}
 
-In the context of Bayesian optimization, the Gaussian process gives us for each set of hyper-parameters an estimation of the performance of the corresponding model and the uncertainty of the Gaussian process in its estimation. But we don't have a way to decide which model is the most interesting to train. Do we pick a model that will be slightly better than our best current model, i.e. where the Gaussian process gives low uncertainty, or do we pick a model with high uncertainty but which could have terrible performance ? There is an exploration/exploitation trade-off. It is the role of the acquisition function to determine which model to train.
+In the context of Bayesian optimization, the Gaussian process gives for each set of hyper-parameters an estimation of the performance of the corresponding model and the uncertainty of the Gaussian process in its estimation. But we do not have a way to decide which model is the most interesting to train. Do we pick a model that will be slightly better than our best current model, i.e. where the Gaussian process gives low uncertainty, or do we pick a model with high uncertainty but which could have terrible performance ? There is an exploration/exploitation trade-off. It is the role of the acquisition function to determine which model to train.
 
-One acquisition function is the Probability of Improvement (\textcite{kushner1964}). It chooses the model which has the highest probability of having better results than a target, which is usually picked to be the loss of the current best model. The PI is defined as such:
+One acquisition function is the Probability of Improvement (\textcite{kushner1964}). It chooses the model which has the highest probability of having better results than a target, which is usually picked to be the loss of the current best model. The \textit{PI} is defined as below, where $\Phi$ is the Normal cumulative distribution function, $\mathrm{x}$ represents a given set of hyper-parameters, $y_*$ is the minimum loss found so far, $\mu$ is the mean returned by the Gaussian process and $\sigma$ the variance:
 \begin{equation}
     PI(\mathrm{x}) = \Phi \left( \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}\right)
 \end{equation}
 
-where $\Phi$ is the Normal cumulative distribution function, $\mathrm{x}$ represents a given set of hyper-parameters, $y_*$ is the minimum loss found so far, $\mu$ is the mean returned by the Gaussian process and $\sigma$ the variance.
+The problem with this function is that it is highly sensitive to the choice of target. The simplest is to choose the minimum loss found so far, but the \textit{PI} will then sample models very close to the corresponding model completely foregoing exploration. A better target is how much to improve on the minimum loss. But that's very inconvenient because we usually have no idea how much better we can get. Should we try to find a model $1 \%$ better ? $5 \%$ ? $25 \%$ And if we pick too big of an improvement, the function will simply select the models with the highest uncertainty.
 
-The problem with this function is that it is highly sensitive to choice of target. If picked to be the loss of the best model found so far, it will sample models very close to it, meaning we need to specify how much better we want to be. But that's very inconvenient because we usually have no idea how much better we can get. Should we try to find a model $1 \%$ better ? $5 \%$ ? $25 \%$ And if we pick too big of an improvement, the function will simply select the models with the highest uncertainty.
-
-Instead, we can use the Expected Improvement function (\textcite{schonlau1998}) which build on the Probability of Improvement:
+Instead, we can use the Expected Improvement function (\textcite{schonlau1998}) which build on the Probability of Improvement as below where $\phi$ is the normal density function.:
 \begin{equation}
 	EI(\mathrm{x})  = \sigma (\mathrm{x}) [u\Phi(u)+\phi(u)]
 \end{equation}
@@ -287,26 +283,26 @@ with
 	u = \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}
 \end{equation}
 
-where $\phi$ is the normal density function. EI is obtained by taking the expectation of the improvement function (\textcite{shahriari2016IEEE}), defined as such:
-
+\textit{EI} is obtained by taking the expectation of the improvement function (\textcite{shahriari2016IEEE}), defined as:
 \begin{equation}
 	I(\mathrm{x}) = \left(y_* - \mu(\mathrm{x}) \right) \mathds{1} \left(y_* > \mu(\mathrm{x}) \right)
 \end{equation}
+
 This function is equal to $0$ if the predicted mean is less than the best loss found so far (which means that there is no improvement), otherwise it is proportional to the gap between the predicted mean and best loss. 
 
-The Expected Improvement has one big advantage over the Probability of Improvement. The target is always the minimum loss found so far, meaning there is no need to guess a threshold of improvement. 
+The Expected Improvement has one big advantage over the Probability of Improvement. The target is always the minimum loss found so far, meaning that there is no need to guess a threshold of improvement. 
 
 An extended discussion on the trade-offs between Probability of Improvement and Expected Improvement can be found in~\textcite{jones2001}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Tying it together}
+\subsection{Bayesian Optimization}
 
 TODO:
 \begin{itemize}
     \item Figure step-by-step BO
 \end{itemize}
 
-Let's resume the situation. We are trying to find the best model in a large family of models in a reasonable amount of time. We have already trained some models and are trying to decide which model to train next. First, we fit a Gaussian process on the models already trained, with the hyper-parameters as the input, and the loss of the corresponding model as the output. We then sample new combinations and have them predicted by the Gaussian process. For each sample, we also compute the Expected Improvement. The next model to train is the one with the highest EI. Once it's trained, we fit again the Gaussian process with the new information, and we repeat the process until we run out of time or we obtain a model good enough for our purposes. Figure~\ref{fig:bo} shows this process on a one-dimensional problem.
+Let us resume the situation. We want to find the best model in a large family of models in a reasonable amount of time. We have already trained some models and are trying to decide which model to train next. First, we fit a Gaussian process on the models already trained, with the hyper-parameters as the input, and the loss of the corresponding model as the output. We then sample new combinations and have them predicted by the Gaussian process. For each sample, we also compute the Expected Improvement. The next model to train is the one with the highest \textit{EI}. Once it is trained, we fit again the Gaussian process with the new information, and we repeat the process until we run out of time or we obtain a model good enough for our purposes. Figure~\ref{fig:bo} shows this process on a one-dimensional problem.
 
 \begin{figure}[htb]
 	\centering
@@ -315,7 +311,7 @@ Let's resume the situation. We are trying to find the best model in a large fami
 	\label{fig:bo}
 \end{figure}
 
-Some questions remain. How to pick the first model ? Select a random configuration of hyper-parameters from the hyper-parameter space. What loss should the Gaussian process predict ? Ideally, the loss of the model on the validation set. Otherwise the loss on the training set works fine. How to sample configurations ? Uniformly from the hyper-parameter space. How many configurations should be sampled before selecting a model to train ? As many as reasonably possible. The step of selecting a model should be much faster than training it, and most of the cost of Bayesian optimization should be in the inversion of the Gram matrix (see Section~\ref{ssec:practical} for details).
+Some questions remain. How to pick the first model ? Select a random configuration of hyper-parameters from the hyper-parameter space. Should the Gaussian process predict the loss on the training set or on the validation set ? The loss on the validation set is to be preferred. How to sample configurations ? Uniformly from the hyper-parameter space. How many configurations should be sampled before selecting a model to train ? As many as reasonably possible. The step of selecting a model should be much faster than training it, and most of the cost of Bayesian optimization should be in the inversion of the Gram matrix (see Section~\ref{ssec:practical} for details).
 
 %Hyperopt~\textcite{bergstra2013ICML}
 
@@ -335,7 +331,7 @@ TODO
     \item Describe tree of Parzen estimator
 \end{itemize}
 
-The version of Bayesian optimization we presented deals efficiently with both discrete and continuous hyper-parameters. But what about conditional hyper-parameters ? For example, some hyper-parameter could be specific to a particular layer and one hyper-parameter could control the number of layers. But then, what happens to the hyper-parameters of a non-existent layer ? With a Gaussian process, we need to give them a value and it means there will be many configurations that corresponds to the same model. In practice, we can ignore those cases, and the Gaussian process will eventually give a low uncertainty in those regions and pick models elsewhere. But this is extremely wasteful as we will retrain the same model many times before this happens ! 
+The version of Bayesian optimization we presented deals efficiently with both discrete and continuous hyper-parameters. But what about conditional hyper-parameters ? For example, some hyper-parameters could be specific to a particular layer and one hyper-parameter could control the number of layers. But then, what happens to the hyper-parameters of a non-existent layer ? With a Gaussian process, we need to give them a value and it means there will be many configurations that corresponds to the same model. In practice, we can ignore those cases, and the Gaussian process will eventually give a low uncertainty in those regions and pick models elsewhere. But this is extremely wasteful as we will retrain the same model many times before this happens ! 
 
 One solution is to use a specialized kernel called a cylindrical kernel (\textcite{swersky2013},~\textcite{oh2018}).
 
@@ -405,42 +401,148 @@ is already known. The question is then: can we compute $L_{(n+k)}$ from $L_{(n)}
 ==The complexity of the Cholesky decomposition is $O\left(\frac{(n+k)^3}{3}\right)$. In our case, this becomes $O\left(\frac{k^3}{3}\right)$ since it is still necessary to compute the decomposition of the $k$ new points.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Contribution: Combining Bayesian Optimization and Hyperband}
+\label{sec:cap}
+
+This section describes and extend work that was presented at CAp 2017 (\textcite{bertrand2017CAp}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Hyperband}
+\label{ssec:hyperband}
+
+A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
+
+The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and so on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
+
+But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, we do not know how to find that point and it changes between tasks. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the end.
+
+The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. We chose $R = 27$ minutes and $\eta = 3$, which means that we keep $1/3$ of models at each evaluation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Combining the methods}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Random Search Efficiency}
+\label{ssec:random}
+
+TODO:
+\begin{itemize}
+    \item Find where to put this section
+\end{itemize}
+
+How many models of a hyper-parameters space should be trained in order to be reasonably certain to have trained one of the best ? If we knew the loss $l_{min}$ of the best model, how long would it take to find a model with a loss such as $l \leq (1 + \alpha) l_{min}$ ?
+
+Let $N$ be the total number of models in the hyper-parameters space, $M$ the number of models satisfying our performance criteria (alternatively, the $M$ best models of the space) and $n$ the number of models to train.
+
+Considering random search chooses models uniformly, the probability of drawing one of the best model the first time is simply $\frac{M}{N}$. The second time, it is $\frac{M}{N - 1}$ since we do not allow redrawing a model. We can therefore define the probability of not drawing any satisfying models after $n$ draw as:
+
+\begin{equation}
+    P \left( Y = n \right) = \prod_{k = 0}^{n} \left( 1 -  \frac{M}{N - k} \right)
+\end{equation}
+
+where $Y$ is the random variable of failing to draw an acceptable models $n$ draw in a row. This is a particular case of the hypergeometric distribution. From there, the probability of drawing an acceptable model at the $n$-th draw is:
+
+\begin{equation}
+    P\left(X = n \right) = \frac{M}{N - n} \prod_{k = 0}^{n - 1} \left( 1 -  \frac{M}{N - k} \right)
+\end{equation}
+
+$X$ is the random variable of drawing an acceptable model after $n - 1$ bad draws. The probability of drawing an acceptable model in the first $n$ draws is:
+
+\begin{equation}
+    P\left(X \leq n \right) = \sum_{k = 0}^{n} P\left(X = k \right)
+\end{equation}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Experiments on CIFAR-10}
+
+TODO:
+\begin{itemize}
+    \item Results on hyperband
+    \item Results on hyperband + bo
+    \item Redo on many seeds
+\end{itemize}
+
+In order to compare the performance of the different hyper-parameter optimization methods, we devised a hyper-parameter space containing 600 models and trained them all on the CIFAR-10 dataset (\textcite{krizhevsky2009}).
+
+The dataset is composed of 60 000 images equally divided in 10 classes. The images are 32x32 RGB images. The training set contains 50 000 images, the test set 10 000.
+
+Since the goal of the experiment is not to beat the state-of-the-art on the dataset, the selected hyper-parameter space and the resulting models are small and simple. Each model is trained for a total of 10 minutes. 
+
+We then compare in which order the different methods selected the models. The methods are evaluated on how long it took them to select the best model, but also on the average performance of the models selected, i.e. if we rank the models by their performance, how close were each method from selecting the models in that order.
+
+Figure~\ref{fig:cifar_loss} shows this. The blue points represent the test loss of the models in the order the methods selected them, and the red line shows the minimum loss found at a given time. 
+
+\begin{figure}[htbp]
+	\begin{subfigure}[b]{\textwidth}
+            \centering
+            \includegraphics[width=\linewidth]{img_hyperopt/cifar_random}
+    \end{subfigure}%
+    
+    \begin{subfigure}[b]{\textwidth}
+            \centering
+            \includegraphics[width=\linewidth]{img_hyperopt/cifar_bo}
+    \end{subfigure}%
+    \caption{Comparing the model order chosen by random search (top) vs Bayesian optimization (bottom).}
+	\label{fig:cifar_loss}
+\end{figure}
+
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=\linewidth]{img_hyperopt/bo_error_time.png}
+	\label{fig:bo_error_time}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
 
-This section describes and extend work that was presented at ISBI 2017.
-
-%==starting from a baseline network (Section~\ref{ssec:baseline}), we present an automatic strategy to find better architectures given our clinical context. We constrain our search to a space of networks represented by a specific parametrization (Section~\ref{ssec:param}) that includes enough diversity and, at the same time, promising models (including AlexNet-like, VGG-like). Inspired by the work in~\cite{jones_taxonomy_2001}, we devise an automatic optimization process (Section~\ref{ssec:search}) to produce an ensemble of successful models (Section~\ref{ssec:ensemble}). The interest and efficiency of this strategy are demonstrated on our application in Section~\ref{sec:results}.
+This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dataset and Problem Description}
 
-TODO:
-\begin{itemize}
-    \item Pick better images from the dataset
-\end{itemize}
-
 \begin{figure}
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
-                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_1}
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Abdomen_785}
         \end{subfigure}%
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
-                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_2}
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Abdomen_1050}
         \end{subfigure}%
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
-                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_3}
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Abdomen_5115}
         \end{subfigure}%
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
-                \includegraphics[width=.95\linewidth]{img_hyperopt/abdo_4}
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Chest_6810}
         \end{subfigure}
-        \caption{Examples of abdomen in our dataset showing the great variety of protocols}
-        \label{fig:abdomens}
+        
+        \vspace*{2mm}
+        
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Head_13330}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Head_14031}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Legs_13170}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.25\textwidth}
+                \centering
+                \includegraphics[width=.95\linewidth]{img_hyperopt/Pelvis_23016}
+        \end{subfigure}
+        \caption{Images from the MR dataset showing the variety of classes and protocols.}
+        \label{fig:dataset}
 \end{figure}
 
-Given an MRI volume we would like to know which anatomical region are contained in it and their position in the volume. Since MRI data is acquired in a slice by slice approach, we reduce the problem to a two dimension classification task (into head, chest, abdomen, pelvis, legs and spine).
+Given an MRI volume we would like to know which anatomical regions are contained in it and their position in the volume. Since MRI data are acquired in a slice by slice approach, we reduce the problem to a two dimensional classification task of axial slices (into head, chest, abdomen, pelvis, legs and spine).
 
 \begin{table}
 	\centering
@@ -459,9 +561,9 @@ Given an MRI volume we would like to know which anatomical region are contained 
 	\label{table:dataset}
 \end{table}
 
-The dataset consists of MRI images coming from a variety of hospitals and machines across the world (such as the \textit{Centre Hospitalier Lyon-Sud, France} or \textit{ Johns Hopkins University, USA}). As a consequence our images display a large variety of protocols (see Figure~\ref{fig:abdomens}) as well as resolution, number of volumes per class and number of slices per volume. Table~\ref{table:dataset} sums up the content of our dataset.
+The dataset consists of MRI images coming from a variety of hospitals and machines across the world (such as the \textit{Centre Hospitalier Lyon-Sud, France} or \textit{ Johns Hopkins University, USA}). As a consequence the images are highly varied in terms of protocols (see Figure~\ref{fig:dataset}) as well as resolution, number of volumes per class and number of slices per volume. Table~\ref{table:dataset} sums up the content of our dataset.
 
-The dataset is splitted in a training set for the optimization of the weights of the networks, a validation set for model selection (optimization w.r.t hyper-parameters) and a test set for model evaluation (resp. $50 \%$, $25 \%$, $25 \%$). The separation is done volume-wise to take into account intra-subject slices correlations. Volumes containing multiple classes are split by anatomical regions and can end up in different sets. This raises the difficulty of the task since, in case of overfitting, predictions will be wrong at validation or testing phases.
+The dataset is splitted into a training set for the optimization of the weights of the networks, a validation set for model selection (optimization of the hyper-parameters) and a test set for model evaluation (respectively $50 \%$, $25 \%$, $25 \%$ of the database). The separation is done volume-wise to take into account intra-subject slices correlations. Volumes containing multiple classes are split by anatomical regions and can end up in different sets. This raises the difficulty of the task since, in case of overfitting, predictions will be wrong at validation or testing phases.
 
 %We also stratified classes across sets, giving us a proportion of slices per class close to the proportion of volumes per class.
 
@@ -479,7 +581,7 @@ Data augmentation is used and consists in generating 80 000 images per epoch. Th
 	\label{fig:baseline}
 \end{figure}
 
-Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified it manually until settling on the following model, shown in Figure~\ref{fig:baseline}: divided in 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (resp. 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency, using stochastic gradient descent (SGD) with a learning rate of $10^{-3}$, Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$) for 30 epoch.
+Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified it manually until settling on the following model, shown in Figure~\ref{fig:baseline}: it is divided into 5 blocks, each comprising a convolution layer of 64 filters of size $3\times 3$, followed by a rectified linear unit (ReLu) and a max-pooling layer. The network ends with 2 fully-connected layers (respectively 4096 and 1024 units) interleaved with ReLU activations and terminated with a softmax decision layer. This network was trained by minimizing the categorical cross-entropy loss weighted by class frequency, using stochastic gradient descent (SGD) with a learning rate of $10^{-3}$, Nesterov momentum ($m = 0.9$) and decay ($d = 10^{-6}$) for 30 epochs.
 
 \begin{table}
     \centering
@@ -507,7 +609,7 @@ Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified
 	\label{table:conf_matrix_baseline}
 \end{table}
 
-We achieve a $14 \%$ error rate with most of the error focused on the chest. Examining the confusion matrix (Table~\ref{table:conf_matrix_baseline}), we note that the abdomen, pelvis and legs classes have most of their errors located at the boundaries between the classes. These errors make sense as these boundaries are ill-defined and varies from one volume to the next. 
+We achieve a $14 \%$ error rate with most of the error focused on the chest. Examining the confusion matrix (Table~\ref{table:conf_matrix_baseline}), we note that the abdomen, pelvis and legs images have most of their errors located with anatomically adjacent regions. Further examinations of the misclassified images revealed they were for the most part located at the boundaries of their classes. These errors make sense as these boundaries are ill-defined and varies from one volume to the next. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hyper-parameter Optimization}
@@ -526,9 +628,9 @@ TODO:
 	\label{fig:hyperspace}
 \end{figure}
 
-By relaxing some structural parts of our baseline architecture we define a large family of models. This hyper-parametric family has the following structure (see Figure \ref{fig:par_archi}): (1) $b$ convolution block, each including $c$ convolutional layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. Moreover, the convolutions can be separable or not.
+By relaxing some structural parts of our baseline architecture we define a large family of models. This hyper-parametric family has the following structure (see Figure~\ref{fig:hyperspace}): (1) $b$ convolution blocks, each including $c$ convolutional layers of $2^r$ filters of size $s \times s$ interleaved with ReLU activations and terminated by a max-pooling layer, (2) the fully-connected layers as in our baseline architecture, and (3) a final softmax decision layer. Moreover, the convolutions can be separable or not.
 
-Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust training setting accordingly (in our case: learning rate and batch size, all other settings remaining identical). 
+Changes within this parametric space of models may drastically transform the optimization landscape, requiring to adjust the training setting accordingly (in our case: learning rate and batch size, all other settings remaining identical). 
 These architecture hyper-parameters and training settings form the hyper-parameter space. The ranges of those hyper-parameters, detailed in Table~\ref{table:hyper}, were defined so as to fulfill memory (less than 12GB) and time constraints (training should last less than one day).
 
 While many more hyper-parameters could have been considered, the ones we chose already define a search space of 34 300 models, well-above our capacity to fully explore. Those hyper-parameters were chosen as they were considered to have the highest impact on the performance by a mix of intuition and experience. A more systematic approach would likely yield better results, though at a greater computational cost.
@@ -548,7 +650,7 @@ While many more hyper-parameters could have been considered, the ones we chose a
 		Batch Size & $2^{a}, a \in [2 ; 8]$ & 8 \\
 		\hline
 	\end{tabular}
-	\caption{Description of the hyper-parameter space, with their range and and the baseline value.}
+	\caption{Description of the hyper-parameters, with their range and and the baseline value.}
 	\label{table:hyper}
 \end{table}
 
@@ -609,15 +711,15 @@ TODO
 	\label{fig:full_body}
 \end{figure}
 
-Even though we made the choice of processing the data at the slice level, the slices form volumes and we are interested in a decision at the volume level. The first question is does the model classifies two successive slices similarly ? We want it to as successive slices are anatomically close and have similar structure. If the model gives very different predictions, this could be a sign that it relies on noise patterns instead of the anatomical structures.
+Even though we made the choice of processing the data at the slice level, the slices form volumes and we are interested in a decision at the volume level. The first question is: does the model classifies two successive slices similarly ? This is expected since successive slices are anatomically close and have a similar structure. If the model gives very different predictions, this could be a sign that it relies on noise patterns instead of the anatomical structures.
 
-To answer that question, we processed a full body volume by classifying each of its slices through our best model. 
+To answer this question, we processed a full body volume by classifying each of its slices through our best model. 
 %For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. 
-As we can see in Figure~\ref{fig:full_body}, the network is doing well at identifying all body parts, despite the slices being treated independently. Nevertheless the network struggles with the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis with a high confidence. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network every time into the pelvis class. This is likely due to the rarity of those straps in the dataset.
+As we can see in Figure~\ref{fig:full_body}, the network is able to identify all body parts, despite the slices being processed independently. Nevertheless the network tends to misclassify the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis with a high confidence. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network every time into the pelvis class. This is likely due to the rarity of those straps in the dataset.
 
-But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), the scheme would give regions broken in multiple parts and messy boundaries.
+But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), and this approach would give regions broken in multiple parts with messy boundaries.
 
-A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter. This gives us Figure~\ref{fig:full_body}-c. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
+A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter, as illustrated in Figure~\ref{fig:full_body}-c. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
 
 [TODO finish describing decision scheme]
 
@@ -627,47 +729,11 @@ We have shown how to use Bayesian optimization to the concrete problem of MR FOV
 
 The search was vulnerable to all the weaknesses of Bayesian optimization: the process was sequential (only one model trained at a time), we were limited in the hyper-parameters we could use (no conditional hyper-parameters) and the kernel was stationary. As presented in Section~\ref{ssec:nosta}, work has been done on all those limitations and should be incorporated to improve the process. Other search methods could also be used, such as Hyperband (Section~\ref{sec:cap}). 
 
-Another problem encountered is how to deal with models that cannot be trained (because they require too much memory for example). Not putting them in the training set will just let the search pick other similar models, but putting an arbitrarily high value is not ideal either as the Gaussian process will smoothly interpolate to that value, even though there is a discontinuity in that region (a model that can or cannot be trained, it's binary, not a smooth transition).
+Another problem encountered is how to deal with models that cannot be trained (because they require too much memory for example). Not putting them in the training set will just let the search pick other similar models, but putting an arbitrarily high value is not ideal either as the Gaussian process will smoothly interpolate to that value, even though there is a discontinuity in that region (a model that can or cannot be trained, it is binary, not a smooth transition).
 
 Regarding the final models, testing at the volume level has shown that the models are robust and can generalize. Still, the neural network was not enough to obtain smooth coherent predictions, and we presented a decision scheme to fix that.
 
 Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. The model could also be improved by using a cyclic learning rate, spatial dropout on the convolutional layers or replacing the fully-connected layers with convolutional layers.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Contribution: Combining Bayesian Optimization and Hyperband}
-\label{sec:cap}
-
-CAp
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Hyperband}
-\label{ssec:hyperband}
-
-==A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training any time, evaluate the network, then resume training. This is the property Hyperband~\cite{li2017ICLR} takes advantage of.
-
-==The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and so on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
-
-==But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resource training under-performing models. Moreover, we do not know how to find that point and it changes between tasks. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to try a bigger number of configurations, while the last bracket will try only a small number of configurations but will train them until the end.
-
-==The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. We chose $R = 27$ minutes and $\eta = 3$, which means that we keep $1/3$ of models at each evaluation.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Combining the methods}
-
-\begin{figure}[htb]
-	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_acc_time.png}
-	\label{fig:bo_acc_time}
-\end{figure}
-
-\begin{figure}[htb]
-	\centering
-	\includegraphics[width=.95\linewidth]{img_hyperopt/bo_error_time.png}
-	\label{fig:bo_error_time}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Experiments on CIFAR-10}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}

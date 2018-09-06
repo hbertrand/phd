@@ -9,15 +9,30 @@
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Literature Review}
+\section{The many different faces of transfer learning}
+
+Despite all the modern successes of deep learning, the set of tasks that it can solve and that are also related to medical imaging is quite small. A frequent situation that arises is then, if a network is able to segment a particular organ in a particular imaging protocol, surely it is possible to train a network to segment the same organ in another imaging protocol ? Or from a particular population of patients to another ? But surely, since the task stays identical, it should be possible to leverage the knowledge from the first database to help the performance on the second database. This is one of the problem answered by transfer learning.
+
+If we define the \textit{domain} as the data ant its probability distribution, then transfer learning can be divided along two axis. How are the source and target domains related, and how are the source and target tasks related ? 
+
+TODO
+2x2 quadrant same/same = traditional ml
+diff/same = transductive transfer
+same/diff = inductive transfer
+diff/diff = unsupervised transfer
+
+While we briefly present all three kind of transfer learning below, this work focuses on transductive transfer learning, i.e. when the task stays the same, but the domain changes.
 
 Survey~\textcite{pan2010TNDE}
 
-\subsection{Transfer Learning in Machine Learning}
+Reasons for using transfer learning : lack of target data, cost of training from scratch
+
+%%%%%%%%%%%%%%%%%%%
+\subsection{Inductive Transfer Learning}
 
 
-
-\subsection{Transfer Learning and Deep Learning}
+%%%%%%%%%%%%%%%%%%%
+\subsection{Transductive Transfer Learning}
 
 DeCAF~\textcite{donahue14PMLR}
 
@@ -31,19 +46,254 @@ Which layers ? Last, first, random ?
 
 Full finetuning means normal training with a specific initialization.
 
+Fine tuning (\textcite{shin2016}) is the most commonly used technique to perform transfer learning for deep networks: a network trained on a source dataset is retrained on a target dataset with a lower learning rate. No modifications to the architecture are done, making it simple to implement. Unfortunately performance on the source dataset is no longer guaranteed which makes it insufficient for our application.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Domain Adaptation}
+%%%%%%%%%%%%%%%%%%%
+\subsection{Unsupervised Transfer Learning}
 
 GAN DA~\textcite{kamnitsas2017IPMI}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Adding layers}
+\section{Transformation Layers}
 
-\subsection{Predicting transformations}
+Here we propose to introduce ``transfer'' layers within the original model in order to adapt feature maps to the new dataset. We expect these layers to selectively adapt the network to children data while maintaining the network performance on adults.
+
+%We selected six emplacements for adding layers: before the max-pooling and after the up-sampling, as shown in green in Figures ~\ref{fig:unet} and ~\ref{fig:block}. As each additional layer adds parameters and training time, but potentially allows for more capacity, we explored various combinations of emplacements to find the optimal trade-off. Each transfer block must have the same output size as its input to properly connect with the adjacent layer.
+
+%As there is no obvious shape for the transfer layers, we designed a number of variations with different properties. The simplest was a single convolutional layer of $1 \times 1 \times 1$ filters. As $1 \times 1 \times 1$ convolutional layers do not capture locally spatial information, we also tested $3 \times 3 \times 3$ filters with the inconvenient of adding a high number of parameters (because we cannot reduce the number of filters). To solve this issue we used the following block: one $1 \times 1 \times 1$ convolutional layer with less filters to reduce dimensionality, followed by a max-pooling and a $3 \times 3 \times 3$ convolutional layer, then up-sampling and one last $1 \times 1 \times 1$ convolutional layer to recover the expected dimensionality. 
+%One variant we tried was to make those layers residual. The intuition is that because the adults and the children are not so different, it might be easier to learn a correction of the feature maps rather than transform them directly.
+
+When inserting new layers, it might be tempting to simply use standard convolutional layers. The problem is that as the parameters of these layers are fixed once the training is done, the same convolutions will be applied to all images and feature maps. Those new convolutions will heavily degrade performance on images from the original distribution. It is also not obvious where to put those new layers. We instead propose to predict parameters during inference for each image. Images from the source distribution will have parameters predicted close to the identity transform, while images from the target distribution can be transformed to be more similar to the source distribution. We introduce two kinds of transfer layers with different goals.
+
+%One crucial point when adding a layer is to initialize its weights such that the layer is an identity layer at first, meaning that the output is equal to the input. Initializing weights randomly completely destroys the performance and the learning process is unable to recover.
+
+%%%%%%%%%%%%%%%%%%%
+\subsection{Geometric Transformation Layer}
+
+Working within the same image modality, we propose to use geometric transformations as transfer layers in order to effectively transfer information between our datasets (adults to children). 
+This is similar to the Spatial Transformer proposed by~\textcite{jaderberg2015NIPS}, but instead of predicting directly the parameters of the transformation, we predict the amount of translation, rotation and scaling along each axis, i.e. nine parameters in total. These parameters are then used by the transformation layer to geometrically modify its input using tri-linear interpolation. There is no attention mechanism.
+
+We place this layer at the entrance of the network and perform the inverse transformation at the output of the network as shown in Figure~\ref{fig:unet}. The transformation can be seen as a projection on the adults space, and therefore we need to project back on the children space at some point. The prediction of the parameters is done with a 3-layers convolutional network taking the image as input.
+
+%%%%%%%%%%%%%%%%%%%
+\subsection{Intensity Layer}
+
+\begin{figure}
+	\includegraphics[width=\textwidth]{img_transfer/Intensity_Block}
+    \caption{Intensity Layer. ``Parameters Prediction'' can be any model, in our case it is a 3-layers ConvNet.}
+    \label{fig:block}
+\end{figure}
+
+A geometric transformation is not enough to express the differences between the source and target datasets. We therefore propose to predict an intensity transformation, implemented as a $1 \times 1 \times 1$ convolution applied to each feature map, shown in Figure~\ref{fig:block}. The exact transformation applied to each feature map $I_i$ is:
+\begin{equation*}
+O_i = K_i \left( I; \theta \right) * I_i + b_i \left( I; \theta \right)
+\end{equation*}
+where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the parameters predicted. In the end, two parameters have to be predicted for each feature map. Experiments showed that this layer works best when placed at the lowest level of the U-Net (see Figure~\ref{fig:unet}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Kidney Segmentation in 3D Ultrasound}
 
-MICCAI
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Introduction}
+
+A common (and often disappointing) scenario in clinical settings is to expect an algorithm, built on a specific class of medical images, to succeed at the same task on data judged similar by the clinician. Focusing on the particular class of deep learning-based methods, we propose a transfer approach to, if not instantly, quickly satisfy this expectation. We work under the assumption that no access to the original training database is possible, as it is frequently the case in practice. 
+
+The clinical problem motivating this work is the kidney capsule segmentation in 3D ultrasound data from potentially ill children. These images have a high amount of noise, strong dependency on the operator, and important organ shape variability induced by subjects age and degree of illness. Moreover we have limited access to such volumes. In contrast, a much larger database of ultrasound kidney volumes of healthy adults is available, from which we build a successful segmenting deep network. We aim to transfer this network knowledge. % to the pediatric data. 
+
+This work has contributions in both the clinical and technical domains: (i) a deep learning based algorithm for kidney capsule segmentation in 3D ultrasound data (Section~\ref{sssec:unet}), and (ii) a new approach to perform domain transfer of a pre-trained neural network (Section~\ref{sssec:transfer}). In addition we present experiments comparing different transfer methods according to performance, training time and added complexity to determine the trade-offs of each method (Section~\ref{ssec:exp}), and discuss their results, examining the segmentation errors to suggest potential improvements.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Related Work}
+
+%\subsubsection{Kidney segmentation in 3D ultrasound data}
+
+Despite the clinical potential of 3D kidney ultrasounds, both the number of publications and the data used within are relatively small. Moreover, to the best our knowledge, deep learning techniques have not yet been applied.~\textcite{cerrolaza2014ISBI} and~\textcite{marsousi2017} have addressed the capsule segmentation problem in 3D pediatric data using active shape models and for real-time segmentation using implicit deformable models, respectively. 
+%In fact, we have not found any paper using deep learning for the segmentation of the kidney in 3D ultrasound.
+Nevertheless, deep learning techniques have been applied by~\textcite{ravishankar2017MICCAI} to 2D ultrasound kidney images. Their approach is compelling since they manage to combine deep learning and shape priors by using two networks, first a U-Net for the segmentation, then a convolutional auto-encoder as a shape prior used for regularization.
+
+The baseline to our work (Section~\ref{sssec:baseline}) is the well-known deep learning architecture ``U-Net'' (\textcite{ronneberger2015MICCAI}) and its 3D version (\textcite{cicek2016MICCAI}). 
+
+%DeepMedic is another framework developed for the segmentation of lesions in 3D MR brain images by Kamnitsas \textit{et al.}~\cite{kamnitsas_2017}. The segmentation is done in two parts, first the image go through a 3D convolutional neural network that outputs a segmentation map, which is then refined by a 3D conditional random field. Additionally, the CNN takes as input the image at normal resolution and a down-sampled version in order to incorporate multi-scale features.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Methods}
+
+\subsubsection{Baseline}
+\label{sssec:unet}
+
+The 3D extension (\textcite{cicek2016MICCAI}) of the U-Net (\textcite{ronneberger2015MICCAI}) architecture is our starting point. Its symmetrical structure alternates convolutional layers with down-sampling layers on one side and convolutional layers with up-sampling layers on the other (see Figure~\ref{fig:unet}). At each level, down-sampled feature maps are concatenated to up-sampled ones to enforce attachment to the data. In our adaptation of this architecture we replace the weighted softmax loss by a Dice-based loss, more adapted to our segmentation task. Moreover, introducing Spatial Dropout (\textcite{tompson2015CVPR}) after each convolution-sampling block proved to significantly improve our results by preventing over-fitting.
+
+\begin{figure}
+	\includegraphics[width=0.9\textwidth]{img_transfer/UNet}
+    \caption{U-Net structure with our added transformation and intensity layers.}
+    \label{fig:unet}
+\end{figure}
+
+%We also train the network with Spatial Dropout after each block, just before the down and up-sampling layers. Standard Dropout~\cite{srivastava_2014} is a regularization method that works by randomly setting a group of neurons at zero after each batch during training. This helps reducing over-fitting by preventing neurons from becoming strongly correlated. But this has no effect on convolutional layers as inputs are spatially correlated. A solution is to use Spatial Dropout~\cite{tompson_2015} which, instead of dropping neurons, drops entire feature maps.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Transfer Learning with Transformation Layers}
+\label{sssec:transfer}
+
+Having successfully trained a network on kidney adults data we seek to transfer its knowledge into a new model that will correctly segment pediatric kidneys and still have good performances on adults. Fine tuning is a poor option in our case since it degrades the performance on the adult images.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Experiments and Results}
+\label{ssec:exp}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Dataset}
+\label{sssec:data}
+
+The ultrasound volumes in our study come from several clinical sites around the world.
+As a result, there is a high variability in the quality of the images, which translates into various amounts of noise and shadows artifacts.
+
+We have a total of 503 healthy adults images, and 64 children, of which about $30 \%$ have hydronephrosis in various stages. The database was split into $80 \%$ of the images used for training, the rest for testing.
+
+The volumes we give to the network have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. The size in voxels was chosen in order to fit the network and a volume on a single NVIDIA TITAN GPU. The resolution was chosen so that each volume would fit entirely in the cube. 
+%Because we are not segmenting fine structures but only the kidneys, a smaller resolution is not vital.
+
+%%%%%%%%%%%%%%%%%%%
+\subsubsection{Baseline}
+\label{sssec:baseline}
+
+We used Keras (\textcite{chollet2015keras}) with the Tensorflow backend (\textcite{tensorflow2015}). We performed each experiment on five seeds, which impacts both the separation of the data set into training and test sets, and the initialization of the weights of the networks.
+
+Three models are used as baseline: one trained on adults kidneys only, which will also be used for transfer, one trained on children only, and one trained on both, with oversampling of the children to balance each set. Oversampling is a common way of dealing with class imbalance (\textcite{buda2017}) and consists in balancing each epoch to have as many adults as children by drawing each children multiple times.
+
+These baselines allow us to judge the quality of each transfer method. A good transfer method should perform better (or close to) on the children kidneys than the children only network, while staying close to the performance of the adults only network on the adults. The joint model represents the ideal performance we can hope for on adults and children. Results are displayed in Table~\ref{table:results}, and illustrated in Figure~\ref{fig:mseg}.
+
+%%%%%%%%%%%%%%%%%%%
+\subsubsection{Comparing transfer methods}
+
+\begin{table}
+	\centering
+\begin{tabular}{|l|c|c|c|c|}
+	\hline
+    Strategy & \# params & Time & Dice Adults & Dice Children \\
+	\hline
+    Adults Baseline & 16M & 900 & $\bm{0.80 \pm 0.01}$ & $0.61 \pm 0.02$ \\
+    Children Baseline & 16M & 112 & $0.57 \pm 0.03$ & $\bm{0.66 \pm 0.02}$ \\
+    Joint Baseline & 16M & 1790 & $\bm{0.81 \pm 0.01}$ & $\bm{0.74 \pm 0.01}$ \\
+    \hline
+    Fine tuning & 0 & 115 & $0.72 \pm 0.02$ & $0.72 \pm 0.03$ \\
+    %5 & Add layers & a & 1 & 655k & 47 & $0.72 \pm 0.02$ & $0.66 \pm 0.03$ \\
+    %6 & Add layers & a & 3 & 860k & 75 & $0.70 \pm 0.02$ & $0.67 \pm 0.03$ \\
+    %7 & Add layers & b & 1 & 17M & 61 & $0.72 \pm 0.02$ & $0.70 \pm 0.02$ \\
+    Convolutions everywhere & 23M & 182 & $0.71 \pm 0.02$ & $0.72 \pm 0.03$ \\
+    %9 & Residual Convolution & 1.4M & 49 & $0.76 \pm 0.02$ & $0.65 \pm 0.03$ \\
+    %10 & Add layers & d & 1 & 9 & 30 & $\bm{0.80 \pm 0.01}$ & $0.61 \pm 0.02$ \\
+    %11 & Add layers & d & 3 & 27 & 88 & $\bm{0.80 \pm 0.01}$ & $0.62 \pm 0.02$ \\
+    %12 & Add layers & e & 1 & 76k & 31 & $0.78 \pm 0.01$ & $0.65 \pm 0.03$ \\
+    %13 & Add layers & e & 3 & 1.4M & 78 & $0.67 \pm 0.05$ & $0.65 \pm 0.07$ \\
+    Geometric Input & 148k & 36 & $0.73 \pm 0.02$ & $0.67 \pm 0.02$ \\
+    Intensity & 124k & 29 & $0.80 \pm 0.01$ & $0.65 \pm 0.03$ \\
+    Geometric Input + Intensity & 272k & 37 & $\bm{0.74 \pm 0.01}$ & $\bm{0.73 \pm 0.02}$ \\
+    \hline
+\end{tabular}
+	\vspace{2mm}
+	\caption{Performance of the baseline and the different transfer methods. Each result is averaged over 5 random seeds impacting the separation of the database into training and testing sets, and the weights initialization of the networks.}
+    \label{table:results}
+\end{table}
+
+% Table index: seed 42, 51, 1337, 3333, 123456
+% Residual conv: version c, depth 1
+% Geometric input: 62, 97, 64, 46, 26
+% Intensity: 63, 98, 65, 47, 27
+% geo + intensity: 61, 96, 63, 45, 25
+% data aug: +5% everywhere
+
+% 61, 68, 69, 59, 68
+
+In all transfer experiments, the source network is the adults baseline. The transfer is done only on the children dataset, but performances are evaluated on both the adults and children datasets. Besides  fine tuning, we experimented with the types of layers added to the network and their position as described in Section~\ref{sssec:transfer}. The most interesting results are presented below.
+
+In this section, we show that some of the proposed models achieve good results, both quantitatively as shown in Table~\ref{table:results} and qualitatively, as illustrated in Figures~\ref{fig:bad_images} and~\ref{fig:mseg}.
+
+Table~\ref{table:results} shows the best performing strategies among those we explored. 
+%The version letter corresponds to the numbering in Figure~\ref{fig:block}, while the depth indicates in which places we added the transfer layers. A depth of 1 means that we added the layers only in the innermost block, while a depth of 3 means that we added layers up to the outermost block of the U-Net. 
+The number of parameters is the number of parameters added by the method to the base network, and the time is the time it takes for one epoch (in seconds).
+
+For the baselines, jointly training on adults and children gives better results than training on each class alone, or than any transfer method. We conclude that it is the method that should be used if we have access to both datasets at the same time. It can be noted that the performance gap on the children dataset between the adults baseline and the children baseline is smaller than between the children baseline and the joint baseline. This suggests that the quantity of available data is more important than its quality.
+
+% \begin{figure}
+% \centering
+% \begin{subfigure}{.5\textwidth}
+%   \centering
+%   \includegraphics[width=\textwidth]{img/adults}
+%   \caption{Dice index on adults}
+% \end{subfigure}%
+% \begin{subfigure}{.5\textwidth}
+%   \centering
+%   \includegraphics[width=\textwidth]{img/children}
+%   \caption{Dice index on children}
+% \end{subfigure}
+% \caption{Comparing transfer methods. The x axis is the time in seconds taken by one epoch, the y axis is the Dice index. The color represents the number of trainable parameters in a logarithmic scale.}
+% \label{fig:tradeoff}
+% \end{figure}
+
+%If we do not have access to the source dataset, we have to use a transfer method. Figure~\ref{fig:tradeoff} shows the performance of each transfer strategy compared to the baseline. Fine tuning works really well if we do not care about the performance on the source dataset. Otherwise, two models offering good trade-offs are numbers 9 and 12. Number 9 is surprising as the transfer blocks are residual, and in all other cases where we tried residual connections, it gave worse results.
+%Number 12 uses only one transformation layer, therefore adding very few parameters and being fast to train. Surprisingly adding more transformation layers gives worse results as number 13 shows.
+
+%Number 7 and 8 seem appealing on first sight as they give results similar to fine tuning, but at the cost of adding more parameters to the network than it had originally. 
+
+For the transfer methods, the fine tuning easily beats the children baseline, but does not reach the performance of the joint baseline on either dataset. Moreover, while it does not add any parameter to the network, it takes more time to train than most other transfer methods (this is due to the fact that we have to compute the gradient of every parameter in the network).
+
+Adding fixed convolutional layers did not work (a, b and c in Figure~\ref{fig:block}. We were able to reach the performance of the fine tuning, but only by adding $3 \times 3 \times 3$ convolutional layers at every position shown in Figure~\ref{fig:unet} (line  ``Convolutions everywhere'' in Table~\ref{table:results}).  This added 23 millions parameters to the network (it originally had 16 millions) and took longer to train than the fine tuning.
+
+``Geometric Input'' means that we predict the parameters of a geometric transformation before the first layer of the network as described in Section~\ref{sssec:transfer}. It is fast to train and beats the children baseline but fine tuning gives better performance. Likewise for ``Intensity'' only, which means putting an intensity layer at the deepest layer of the U-Net.
+
+The best results were obtained by combining the geometric input and learning to predict the parameters of an intensity transformation of the feature maps at the lowest level of the U-Net. This position for the intensity transformation works better than the others. This method adds a small amount of parameters, is fast to train and improve the performance more than fine tuning.
+
+%%%%%%%%%%%%%%%%%%%
+\subsubsection{Examining common failures}
+
+% \begin{figure}[ht]
+%   \begin{subfigure}[b]{0.5\linewidth}
+%     \centering
+%     \includegraphics[width=0.95\linewidth]{img/hist_adults} 
+%   \end{subfigure}%% 
+%   \begin{subfigure}[b]{0.5\linewidth}
+%     \centering
+%     \includegraphics[width=0.95\linewidth]{img/hist_children} 
+%   \end{subfigure} 
+%   \caption{Histogram of Dice coefficient on baseline models. In red is the adults baseline, blue is the children baseline. Left: Dice coefficient on adults, right: Dice coefficient on children.}
+%   \label{fig:hist} 
+% \end{figure}
+
+\begin{figure}
+\centering
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.95\textwidth]{img_transfer/adult_bad}
+\end{subfigure}%
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.95\textwidth]{img_transfer/adult_less_bad}
+\end{subfigure}
+\begin{subfigure}{.33\textwidth}
+  \centering
+  \includegraphics[width=.95\textwidth]{img_transfer/child_less_bad}
+\end{subfigure}
+\caption{Images on which all models fail to generalize well.}
+\label{fig:bad_images}
+\end{figure}
+
+Examining in details the results of the different networks, we can observe a few trends. 
+%From the histograms of the Dice coefficient in Figure~\ref{fig:hist}, 
+Looking at each image individually, we note that a few of them have a very low Dice index ($< 0.20$). We show some of these images in Figure~\ref{fig:bad_images}. Moreover they are consistently bad for all tested models. All three images are of very low quality, and there are shadows hiding parts of the images. Fortunately, they represent less than $1 \%$ of our dataset.
+
+\begin{figure}
+	\includegraphics[width=\textwidth]{img_transfer/seg_good_bad}
+    \caption{Middle slice of 6 different volumes and a network segmentation superposed on it. The top row shows good segmentations with a Dice index $> 0.90$. The bottom row shows segmentations with a Dice index between $0.60$ and $0.70$. They show the most common mistakes made by the network.}
+    \label{fig:mseg}
+\end{figure}
+
+Looking at the other images, two kinds of failures were dominant. Either there were holes in the segmentation or the segmentation were bigger than the ground truth. Some of these mistakes are shown in Figure~\ref{fig:mseg}. The holes in the segmentation result from a lack of constraint on the shape of the segmentation. A big segmentation containing the ground truth or a segmentation with holes can have a high dice value. Adding constraints to the loss could also help to solve some of the common mistakes. Other ways to alleviate the problem would be to smooth the segmentations or to use a shape model, for example using a Conditional Random Field such as in~\textcite{kamnitsas2017MEDIA}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Conclusion}
+\label{ssec:conclusion}
+
+We proposed a new transfer method taking advantage of the particularity of the image format of our problem to obtain better results than the more generic fine-tuning. This new method could be applied to other medical imaging problems, with a few caveats. First, if access to the source dataset is possible, joint training on the source and target should be preferred over any transfer method. Second, if changes to the structure of the network are impossible (for example if the architecture is hard-coded in released software), our method cannot be used. Finally, it depends on the nature of the differences between the source and target distributions. Our method is efficient in the case of geometric and/or intensity differences, making it well suited for medical imaging problems.

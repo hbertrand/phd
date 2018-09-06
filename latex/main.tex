@@ -10,6 +10,7 @@
 \usepackage{graphicx}
 \usepackage{dsfont}
 \usepackage{subcaption}
+\usepackage{bm}
 
 \usepackage{hyperref}
 
@@ -112,6 +113,9 @@
 \newcolumntype{E}{>{\collectcell\ColCell}m{0.4cm}<{\endcollectcell}}  %Cell width
 \newcommand*\rot{\rotatebox{90}}
 
+% subsubsection numbering
+\setcounter{secnumdepth}{3}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Thesis}
@@ -120,7 +124,7 @@
 \addbibresource{references.bib}
 
 % \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
-\includeonly{chap_hyperopt}
+\includeonly{chap_transfer_learning}
 
 \begin{document}
 \maketitle
