@@ -13,48 +13,57 @@
 
 Despite all the modern successes of deep learning, the set of tasks that it can solve and that are also related to medical imaging is quite small. A frequent situation that arises is then, if a network is able to segment a particular organ in a particular imaging protocol, surely it is possible to train a network to segment the same organ in another imaging protocol ? Or from a particular population of patients to another ? But surely, since the task stays identical, it should be possible to leverage the knowledge from the first database to help the performance on the second database. This is one of the problem answered by transfer learning.
 
-If we define the \textit{domain} as the data ant its probability distribution, then transfer learning can be divided along two axis. How are the source and target domains related, and how are the source and target tasks related ? 
+There are various reasons why we might want to bother with transfer learning. In the medical field in particular, the acquisition of data is costly and time-consuming, and labeling or segmenting the acquired data even more so. It is very common to have only a handful of patients from a particular population. Using every available bit of data is necessary, and re-using them would be even better. Additionally, modern deep learning models tend to be costly to train, both in resources and time. And it is common to wish to extend a working deep learning model to a new slightly different use-case. It would be great if we were able to re-use the model instead of starting from scratch. All these reasons justify the need for transfer learning.
 
-TODO
-2x2 quadrant same/same = traditional ml
-diff/same = transductive transfer
-same/diff = inductive transfer
-diff/diff = unsupervised transfer
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=0.5\textwidth]{img_transfer/transfer_types.png}
+    \caption{Transfer learning can be divided in four categories depending on how the domains and the tasks are related.}
+    \label{fig:transfer_types}
+\end{figure}
 
-While we briefly present all three kind of transfer learning below, this work focuses on transductive transfer learning, i.e. when the task stays the same, but the domain changes.
+If we define the \textit{domain} as the data and its probability distribution, then transfer learning can be divided along two axis. How are the source and target domains related, and how are the source and target tasks related ? These axis result in four different problems as shown in Figure~\ref{fig:transfer_types}. 
 
-Survey~\textcite{pan2010TNDE}
+Following the notation of~\textcite{pan2010TNDE}, inductive transfer learning is defined as the category of problems where the source and target domains are identical, while the source and target tasks are different, but related. Transductive transfer learning is the category where the source and target domains are different but related, while the source and target tasks are identical. Unsupervised transfer learning happens when both the domains and the tasks are different. In all three cases, transfer of knowledge is possible by exploiting the nature of the differences between the domains and the tasks.
 
-Reasons for using transfer learning : lack of target data, cost of training from scratch
+Finally, if both the domains and the tasks are identical, this is simply standard machine learning and not transfer learning.
+
+In this section we briefly present all three kind of transfer learning, before focusing on transfer learning in the context of deep learning.
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Inductive Transfer Learning}
+\label{ssec:inductive}
 
+In this setting, the source and target tasks are different, while the source and target domains stay the same. 
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Transductive Transfer Learning}
-
-DeCAF~\textcite{donahue14PMLR}
-
-~\textcite{yosinski2014NIPS}
-
-Two standard ways: as feature extractor or for finetuning.
-
-Depth vs accuracy: number of layers before extraction or finetuning.
-
-Which layers ? Last, first, random ?
-
-Full finetuning means normal training with a specific initialization.
-
-Fine tuning (\textcite{shin2016}) is the most commonly used technique to perform transfer learning for deep networks: a network trained on a source dataset is retrained on a target dataset with a lower learning rate. No modifications to the architecture are done, making it simple to implement. Unfortunately performance on the source dataset is no longer guaranteed which makes it insufficient for our application.
+\label{ssec:transductive}
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Unsupervised Transfer Learning}
+\label{ssec:unsupervised}
 
-GAN DA~\textcite{kamnitsas2017IPMI}
+%%%%%%%%%%%%%%%%%%%
+\subsection{Transfer Learning and Deep Learning}
+\label{ssec:deep_transfer}
+
+There is one method that has become the \textit{de facto} face of transfer learning for deep neural networks, due to its simplicity and versatility: fine-tuning (\textcite{hinton2006},~\textcite{bengio2007NIPS}). The idea is that the features learned by a neural network are generic enough that it becomes interesting to re-use them on a different domain, for a different task, or both. No modifications to the architecture are done. The only difference is that the weights of the network are not initialized randomly, but set to the final weights learned on the source domain.
+
+It is not always necessary, or even a good idea, to re-train the whole network. If the target dataset is too small, full fine-tuning risks overfitting. But then, which layers should be fine-tuned ? Lower layers tend to be more generic, while higher layers tend to be specialized to the task (\textcite{yosinski2014NIPS}), suggesting it would be better to fine-tune only the last $n$ layers of the network. An additional advantage is that it is faster as there is no need to back-propagate to the lower layers. The exact value of $n$ is entirely problem-specific, the closer the domains and the tasks are, the less layers need to be fine-tuned.
+
+An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network. 
+
+So far we have assumed the model is trained first on a task, then later adjusted for another. But if we know from the start the multiple tasks, we might as well train on them at the same time. This is the idea of multitask training (\textcite{caruana1995NIPS},~\textcite{caruana1997},~\textcite{collobert2008ICML}). It consistently gives better results on both tasks than sequential transfer methods and should be used if possible.
+
+%Finetuning across domains and tasks~\textcite{tzeng2015ICCV}.
+
+
+%GAN DA~\textcite{kamnitsas2017IPMI}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Transformation Layers}
+\label{sec:transfo}
 
 Here we propose to introduce ``transfer'' layers within the original model in order to adapt feature maps to the new dataset. We expect these layers to selectively adapt the network to children data while maintaining the network performance on adults.
 
