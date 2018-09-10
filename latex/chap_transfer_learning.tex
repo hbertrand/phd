@@ -4,6 +4,10 @@
 \chapter{Transfer Learning}
 \label{chap:transfer}
 
+\begin{chapabstract}
+ Coucou
+\end{chapabstract}
+
 \minitoc
 
 \newpage
@@ -11,24 +15,24 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The many different faces of transfer learning}
 
-Despite all the modern successes of deep learning, the set of tasks that it can solve and that are also related to medical imaging is quite small. A frequent situation that arises is then, if a network is able to segment a particular organ in a particular imaging protocol, surely it is possible to train a network to segment the same organ in another imaging protocol ? Or from a particular population of patients to another ? But surely, since the task stays identical, it should be possible to leverage the knowledge from the first database to help the performance on the second database. This is one of the problem answered by transfer learning.
+Despite all the modern successes of deep learning, the set of tasks that it can solve and that are also related to medical imaging is quite small. A frequent situation that arises is then, if a network is able to segment a particular organ in a particular imaging protocol, is it possible to train a network to segment the same organ in another imaging protocol? Or train a network for a particular population from a network trained for a different population? It is expected that, since the task stays identical, it should be possible to leverage the knowledge from the first database to increase the performance on the second database. This is one of the problem addressed by transfer learning.
 
-There are various reasons why we might want to bother with transfer learning. In the medical field in particular, the acquisition of data is costly and time-consuming, and labeling or segmenting the acquired data even more so. It is very common to have only a handful of patients from a particular population. Using every available bit of data is necessary, and re-using them would be even better. Additionally, modern deep learning models tend to be costly to train, both in resources and time. And it is common to wish to extend a working deep learning model to a new slightly different use-case. It would be great if we were able to re-use the model instead of starting from scratch. All these reasons justify the need for transfer learning.
+There are various reasons why transfer learning may be useful. In the medical field in particular, the acquisition of data is costly and time-consuming, and labeling or segmenting the acquired data to build a training database even more so. It is very common to have only a handful of patients from a particular population. Therefore, using every available bit of data is necessary, and re-using them would be even better. Additionally, modern deep learning models tend to be costly to train, in both resources and time. It is also common to wish to extend a working deep learning model to a new slightly different use-case. It would then be more efficient to re-use the model instead of starting from scratch. All these reasons justify the need for transfer learning.
 
 \begin{figure}[h]
     \centering
 	\includegraphics[width=0.5\textwidth]{img_transfer/transfer_types.png}
-    \caption{Transfer learning can be divided in four categories depending on how the domains and the tasks are related.}
+    \caption{Transfer learning can be divided into four categories depending on how the domains and the tasks are related.}
     \label{fig:transfer_types}
 \end{figure}
 
-If we define the \textit{domain} as the data and its probability distribution, then transfer learning can be divided along two axis. How are the source and target domains related, and how are the source and target tasks related ? These axis result in four different problems as shown in Figure~\ref{fig:transfer_types}. 
+Following the notation of~\textcite{pan2010TNDE}, we define the \textit{domain} as a feature space $\mathcal{X}$ and a probability distribution $P\left( \mathrm{X} \right)$. A \textit{task} is composed of a label space $\mathcal{Y}$ and an objective predictive function $f$ which is learned from the training data (i.e. pairs of $\{ x_i, y_i \}$ where $x_i \in \mathcal{X}$ and $y_i \in \mathcal{Y}$). The transfer is done from a \textit{source} domain and task to a \textit{target} domain and task. These notions forms the two axes according to which transfer learning methods are divided. How are the source and target domains related, and how are the source and target tasks related? These axes result in four different problems as shown in Figure~\ref{fig:transfer_types}. 
 
-Following the notation of~\textcite{pan2010TNDE}, inductive transfer learning is defined as the category of problems where the source and target domains are identical, while the source and target tasks are different, but related. Transductive transfer learning is the category where the source and target domains are different but related, while the source and target tasks are identical. Unsupervised transfer learning happens when both the domains and the tasks are different. In all three cases, transfer of knowledge is possible by exploiting the nature of the differences between the domains and the tasks.
+Inductive transfer learning is the category of problems where the source and target domains are identical, while the source and target tasks are different, but related. An example of such a problem would be an image database where the source task is to detect the presence or absence of particular objects and the target task is to locate those objects in the image. Transductive transfer learning is the category where the source and target domains are different but related, while the source and target tasks are identical. An example that we study in Section~\ref{sec:kidney_seg} is the segmentation of the kidney in 3D ultrasound images, where the source domain is healthy adults and the target domain is sick children. Unsupervised transfer learning happens when both the domains and the tasks are different. In this setting, labels are unavailable for both source and target. In all three cases, transfer of knowledge is possible by exploiting the nature of the differences between the domains and the tasks.
 
-Finally, if both the domains and the tasks are identical, this is simply standard machine learning and not transfer learning.
+In this section we briefly present these three kinds of transfer learning. Then Section~\ref{ssec:deep_transfer} focuses on transfer learning in the context of deep learning.
 
-In this section we briefly present all three kind of transfer learning, before focusing on transfer learning in the context of deep learning.
+If both the domains and the tasks are identical, this is simply standard machine learning and not transfer learning.
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Inductive Transfer Learning}
@@ -44,17 +48,25 @@ In this setting, the source and target tasks are different, while the source and
 \subsection{Unsupervised Transfer Learning}
 \label{ssec:unsupervised}
 
+There has been relatively little work in this setting.~\textcite{dai2008ICML} propose a \textit{self-taught clustering} algorithm which aim to cluster a small unlabeled target dataset at the same time as a big unlabeled source dataset. By learning a common feature space, clustering on the target dataset is improved.
+
+\textcite{chang2018} developed a method to learn a bank of multi-scale convolutional filters from a large unlabeled source dataset and a small target dataset, which can then used in a convolutional neural network to solve classification tasks. Only the construction of the filters bank is done without labels. Application on various biomedical applications shows a clear improvement in performance over using only the target dataset.
+
 %%%%%%%%%%%%%%%%%%%
 \subsection{Transfer Learning and Deep Learning}
 \label{ssec:deep_transfer}
 
-There is one method that has become the \textit{de facto} face of transfer learning for deep neural networks, due to its simplicity and versatility: fine-tuning (\textcite{hinton2006},~\textcite{bengio2007NIPS}). The idea is that the features learned by a neural network are generic enough that it becomes interesting to re-use them on a different domain, for a different task, or both. No modifications to the architecture are done. The only difference is that the weights of the network are not initialized randomly, but set to the final weights learned on the source domain.
+One method has become the \textit{de facto} face of transfer learning for deep neural networks, due to its simplicity and versatility: fine-tuning (\textcite{hinton2006},~\textcite{bengio2007NIPS}). The idea is that the features learned by a neural network are generic enough, so that it becomes interesting to re-use them on a different domain, for a different task, or both. No modifications to the architecture are done. The only difference is that the weights of the network are not initialized randomly, but set to the final weights learned on the source domain.
 
-It is not always necessary, or even a good idea, to re-train the whole network. If the target dataset is too small, full fine-tuning risks overfitting. But then, which layers should be fine-tuned ? Lower layers tend to be more generic, while higher layers tend to be specialized to the task (\textcite{yosinski2014NIPS}), suggesting it would be better to fine-tune only the last $n$ layers of the network. An additional advantage is that it is faster as there is no need to back-propagate to the lower layers. The exact value of $n$ is entirely problem-specific, the closer the domains and the tasks are, the less layers need to be fine-tuned.
+It is not always necessary, or even a good idea, to re-train the whole network. If the target dataset is too small, full fine-tuning risks overfitting. But then, which layers should be fine-tuned? Lower layers tend to be more generic, while higher layers tend to be specialized to the task (\textcite{yosinski2014NIPS}), suggesting that it would be better to fine-tune only the last $n$ layers of the network. An additional advantage is that it is faster as there is no need to back-propagate to the lower layers. The exact value of $n$ is entirely problem-specific, the closer the domains and the tasks are, the less layers need to be fine-tuned.
 
-An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network. 
+Moreover the source dataset does not need to be closely related to the target dataset. A network trained for classification on the ImageNet dataset (\textcite{imagenet}) can be fine-tuned on other natural images dataset for classification or even detection and improve the results over training from scratch (\textcite{oquab2014CVPR},~\textcite{razavian2014CVPR}).
+
+An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network. Features extracted from natural images have been shown to be useful to medical images (\textcite{shin2016},~\textcite{bar2015ISBI},~\textcite{vanginneken2015ISBI}).
 
 So far we have assumed the model is trained first on a task, then later adjusted for another. But if we know from the start the multiple tasks, we might as well train on them at the same time. This is the idea of multitask training (\textcite{caruana1995NIPS},~\textcite{caruana1997},~\textcite{collobert2008ICML}). It consistently gives better results on both tasks than sequential transfer methods and should be used if possible.
+
+Autoencoders (\textcite{ballard1987},~\textcite{bengio2007NIPS}) are neural networks learned in an unsupervised manner. The goal of the network is to reconstruct its input from a compressed representation of the data that it will learn. The first part of the network progressively compresses the input while the second part decompresses it. That first part can then be used as a pre-trained network for other datasets and tasks (\textcite{bengio2007NIPS},~\textcite{vincent2008ICML},~\textcite{erhan2010JMLR}). The representation learned by the autoencoder can also be used as the features of another model, which is helpful even for distant domains such as natural images and MR images (\textcite{gupta2013ICML}). More generally, unsupervised pre-training on natural images has successfully been used to improve results on medical imaging tasks (\textcite{schlegl2014MICCAI},~\textcite{hofmanninger2015CVPR}).
 
 %Finetuning across domains and tasks~\textcite{tzeng2015ICCV}.
 
@@ -101,6 +113,7 @@ where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Kidney Segmentation in 3D Ultrasound}
+\label{sec:kidney_seg}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Introduction}
