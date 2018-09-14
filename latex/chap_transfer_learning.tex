@@ -5,8 +5,10 @@
 \label{chap:transfer}
 
 \begin{chapabstract}
- Coucou
+After a brief tour of the landscape of transfer learning methods in Section~\ref{sec:transfer}, we introduce the problem of kidney segmentation in 3D ultrasound images across two populations: healthy adults and sick children (Section~\ref{sec:kidney}). The standard transfer learning methods for deep learning form our baselines in Section~\ref{sec:kidney_baseline}, but proved insufficient for our problem and led us to develop a new transfer learning method presented in Section~\ref{sec:transfo}. We wrap up the chapter with a comparison of the tested methods and a discussion of the results in Section~\ref{sec:kidney_res} and a conclusion in Section~\ref{sec:transfer_conclusion}.
 \end{chapabstract}
+
+\vspace{1cm}
 
 \minitoc
 
@@ -14,6 +16,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The many different faces of transfer learning}
+\label{sec:transfer}
 
 Despite all the modern successes of deep learning, the set of tasks that it can solve and that are also related to medical imaging is quite small. A frequent situation that arises is then, if a network is able to segment a particular organ in a particular imaging protocol, is it possible to train a network to segment the same organ in another imaging protocol? Or train a network for a particular population from a network trained for a different population? It is expected that, since the task stays identical, it should be possible to leverage the knowledge from the first database to increase the performance on the second database. This is one of the problem addressed by transfer learning.
 
@@ -28,7 +31,7 @@ There are various reasons why transfer learning may be useful. In the medical fi
 
 Following the notation of~\textcite{pan2010TNDE}, we define the \textit{domain} as a feature space $\mathcal{X}$ and a probability distribution $P\left( \mathrm{X} \right)$. A \textit{task} is composed of a label space $\mathcal{Y}$ and an objective predictive function $f$ which is learned from the training data (i.e. pairs of $\{ x_i, y_i \}$ where $x_i \in \mathcal{X}$ and $y_i \in \mathcal{Y}$). The transfer is done from a \textit{source} domain and task to a \textit{target} domain and task. These notions forms the two axes according to which transfer learning methods are divided. How are the source and target domains related, and how are the source and target tasks related? These axes result in four different problems as shown in Figure~\ref{fig:transfer_types}. 
 
-Inductive transfer learning is the category of problems where the source and target domains are identical, while the source and target tasks are different, but related. An example of such a problem would be an image database where the source task is to detect the presence or absence of particular objects and the target task is to locate those objects in the image. Transductive transfer learning is the category where the source and target domains are different but related, while the source and target tasks are identical. An example that we study in Section~\ref{sec:kidney_seg} is the segmentation of the kidney in 3D ultrasound images, where the source domain is healthy adults and the target domain is sick children. Unsupervised transfer learning happens when both the domains and the tasks are different. In this setting, labels are unavailable for both source and target. In all three cases, transfer of knowledge is possible by exploiting the nature of the differences between the domains and the tasks.
+Inductive transfer learning is the category of problems where the source and target domains are identical, while the source and target tasks are different, but related. An example of such a problem would be an image database where the source task is to detect the presence or absence of particular objects and the target task is to locate those objects in the image. Transductive transfer learning is the category where the source and target domains are different but related, while the source and target tasks are identical. An example that we introduce in Section~\ref{sec:kidney} is the segmentation of the kidney in 3D ultrasound images, where the source domain is healthy adults and the target domain is sick children. Unsupervised transfer learning happens when both the domains and the tasks are different. In this setting, labels are unavailable for both source and target. In all three cases, transfer of knowledge is possible by exploiting the nature of the differences between the domains and the tasks.
 
 In this section we briefly present these three kinds of transfer learning. Then Section~\ref{ssec:deep_transfer} focuses on transfer learning in the context of deep learning.
 
@@ -38,11 +41,19 @@ If both the domains and the tasks are identical, this is simply standard machine
 \subsection{Inductive Transfer Learning}
 \label{ssec:inductive}
 
-In this setting, the source and target tasks are different, while the source and target domains stay the same. 
+In this setting, the source and target tasks are different, while the source and target domains stay the same. Many approaches have been explored in this setting. An extension of the AdaBoost algorithm, TrAdaBoost (\textcite{dai2007ICML}), assumes data in the source and target domain share features and labels but have different distribution in order to propose an iterative reweighting of the source domain data during training. 
+
+Learning a low-dimensional representation of the data that is shared across tasks is an idea explored in a supervised fashion (\textcite{argyriou2006NIPS},~\textcite{lee2007ICML}) and unsupervised (\textcite{raina2007ICML}).
+
+It is also possible to transfer parameters or hyper-parameters of various models. \textcite{lawrence2004ICML} proposes to learn kernel parameters for Gaussian processes across tasks,~\textcite{evgeniou2004} developed a regularization framework for sharing parameters of SVMs. \textcite{gao2008} built an ensemble learning framework where the weights of each model are assigned dynamically for each sample in the target domain.
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Transductive Transfer Learning}
 \label{ssec:transductive}
+
+Transductive transfer learning (\textcite{arnold2007}), also called domain adaptation, focuses on solving the same task across different domains. The difficulty comes when little data is available in the target domain, or when labels are unavailable or sparse for the target domain. A lot of work has been done on how to relate the unlabeled target data with the labeled data through the loss of the model (\textcite{arnold2007})) or in which proportion they should be mixed during training (\textcite{crammer2008JMLR},~\textcite{ben-david2010}).
+
+When the model learns simultaneously on the different domains, this is multi-domain learning (\textcite{daume2007},~\textcite{joshi2013}).
 
 %%%%%%%%%%%%%%%%%%%
 \subsection{Unsupervised Transfer Learning}
@@ -62,16 +73,71 @@ It is not always necessary, or even a good idea, to re-train the whole network. 
 
 Moreover the source dataset does not need to be closely related to the target dataset. A network trained for classification on the ImageNet dataset (\textcite{imagenet}) can be fine-tuned on other natural images dataset for classification or even detection and improve the results over training from scratch (\textcite{oquab2014CVPR},~\textcite{razavian2014CVPR}).
 
-An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network. Features extracted from natural images have been shown to be useful to medical images (\textcite{shin2016},~\textcite{bar2015ISBI},~\textcite{vanginneken2015ISBI}).
-
-So far we have assumed the model is trained first on a task, then later adjusted for another. But if we know from the start the multiple tasks, we might as well train on them at the same time. This is the idea of multitask training (\textcite{caruana1995NIPS},~\textcite{caruana1997},~\textcite{collobert2008ICML}). It consistently gives better results on both tasks than sequential transfer methods and should be used if possible.
+An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR},~\textcite{sermanet2014ICLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network. Features extracted from natural images have been shown to be useful to medical images (\textcite{shin2016},~\textcite{bar2015ISBI},~\textcite{vanginneken2015ISBI}).
 
 Autoencoders (\textcite{ballard1987},~\textcite{bengio2007NIPS}) are neural networks learned in an unsupervised manner. The goal of the network is to reconstruct its input from a compressed representation of the data that it will learn. The first part of the network progressively compresses the input while the second part decompresses it. That first part can then be used as a pre-trained network for other datasets and tasks (\textcite{bengio2007NIPS},~\textcite{vincent2008ICML},~\textcite{erhan2010JMLR}). The representation learned by the autoencoder can also be used as the features of another model, which is helpful even for distant domains such as natural images and MR images (\textcite{gupta2013ICML}). More generally, unsupervised pre-training on natural images has successfully been used to improve results on medical imaging tasks (\textcite{schlegl2014MICCAI},~\textcite{hofmanninger2015CVPR}).
+
+The methods discussed so far assume a sequence of actions. First a source task is solved on a source domain, and then a target task is solved on a target domain. But if the different tasks are defined from the start, it makes sense to solve them simultaneously. This is the idea of multitask training (\textcite{caruana1995NIPS},~\textcite{caruana1997},~\textcite{collobert2008ICML}). It consistently gives better results on both tasks than sequential transfer methods. 
+
+Likewise, when solving a task on different domains accessible from the start, it makes sense to use the different domains at the same time. The simplest method is to train the network on the union of the different domains, but this does not work well when one domain is a lot bigger than the other. Weighting each sample according to the number of samples of each domain (\textcite{daume2007}) or balancing batches across domains during training (\textcite{buda2017}) fix this problem. More complex multi-domain training methods exist, such as~\textcite{nam2016CVPR} where the network learn domain-specific convolutional layers.
+
 
 %Finetuning across domains and tasks~\textcite{tzeng2015ICCV}.
 
 
 %GAN DA~\textcite{kamnitsas2017IPMI}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Kidney Segmentation in 3D Ultrasound}
+\label{sec:kidney}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Introduction}
+
+A common (and often disappointing) scenario in clinical settings is to expect an algorithm, built on a specific class of medical images, to succeed at the same task on data judged similar by the clinician. Focusing on the particular class of deep learning-based methods, we propose a transfer approach to, if not instantly, quickly satisfy this expectation. We work under the assumption that no access to the original training database is possible, as it is frequently the case in practice. 
+
+The clinical problem motivating this work is the kidney capsule segmentation in 3D ultrasound data from potentially ill children. These images have a high amount of noise, strong dependency on the operator, and important organ shape variability induced by subjects age and degree of illness. Moreover we have limited access to such volumes. In contrast, a much larger database of ultrasound kidney volumes of healthy adults is available, from which we build a successful segmenting deep network. We aim to transfer this network knowledge. % to the pediatric data. 
+
+%This work has contributions in both the clinical and technical domains: (i) a deep learning based algorithm for kidney capsule segmentation in 3D ultrasound data (Section~\ref{sssec:unet}), and (ii) a new approach to perform domain transfer of a pre-trained neural network (Section~\ref{sssec:transfer}). In addition we present experiments comparing different transfer methods according to performance, training time and added complexity to determine the trade-offs of each method (Section~\ref{ssec:exp}), and discuss their results, examining the segmentation errors to suggest potential improvements.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Related Work}
+
+%\subsubsection{Kidney segmentation in 3D ultrasound data}
+
+Despite the clinical potential of 3D kidney ultrasounds, both the number of publications and the data used within are relatively small. Moreover, to the best our knowledge, deep learning techniques have not yet been applied.~\textcite{cerrolaza2014ISBI} and~\textcite{marsousi2017} have addressed the capsule segmentation problem in 3D pediatric data using active shape models and for real-time segmentation using implicit deformable models, respectively. 
+%In fact, we have not found any paper using deep learning for the segmentation of the kidney in 3D ultrasound.
+Nevertheless, deep learning techniques have been applied by~\textcite{ravishankar2017MICCAI} to 2D ultrasound kidney images. Their approach is compelling since they manage to combine deep learning and shape priors by using two networks, first a U-Net for the segmentation, then a convolutional auto-encoder as a shape prior used for regularization.
+
+The baseline to our work (Section~\ref{sec:kidney_baseline}) is the well-known deep learning architecture ``U-Net'' (\textcite{ronneberger2015MICCAI}) and its 3D version (\textcite{cicek2016MICCAI}). 
+
+%DeepMedic is another framework developed for the segmentation of lesions in 3D MR brain images by Kamnitsas \textit{et al.}~\cite{kamnitsas_2017}. The segmentation is done in two parts, first the image go through a 3D convolutional neural network that outputs a segmentation map, which is then refined by a 3D conditional random field. Additionally, the CNN takes as input the image at normal resolution and a down-sampled version in order to incorporate multi-scale features.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Dataset}
+\label{ssec:data}
+
+The ultrasound volumes in our study come from several clinical sites around the world.
+As a result, there is a high variability in the quality of the images, which translates into various amounts of noise and shadows artifacts.
+
+We have a total of 503 healthy adults images, and 64 children, of which about $30 \%$ have hydronephrosis in various stages. The database was split into $80 \%$ of the images used for training, the rest for testing.
+
+The volumes we give to the network have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. The size in voxels was chosen in order to fit the network and a volume on a single NVIDIA TITAN GPU. The resolution was chosen so that each volume would fit entirely in the cube. 
+%Because we are not segmenting fine structures but only the kidneys, a smaller resolution is not vital.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Baseline}
+\label{sec:kidney_baseline}
+
+The 3D extension (\textcite{cicek2016MICCAI}) of the U-Net (\textcite{ronneberger2015MICCAI}) architecture is our starting point. Its symmetrical structure alternates convolutional layers with down-sampling layers on one side and convolutional layers with up-sampling layers on the other (see Figure~\ref{fig:unet}). At each level, down-sampled feature maps are concatenated to up-sampled ones to enforce attachment to the data. In our adaptation of this architecture we replace the weighted softmax loss by a Dice-based loss, more adapted to our segmentation task. Moreover, introducing Spatial Dropout (\textcite{tompson2015CVPR}) after each convolution-sampling block proved to significantly improve our results by preventing over-fitting.
+
+\begin{figure}
+	\includegraphics[width=0.9\textwidth]{img_transfer/UNet}
+    \caption{U-Net structure with our added transformation and intensity layers.}
+    \label{fig:unet}
+\end{figure}
+
+%We also train the network with Spatial Dropout after each block, just before the down and up-sampling layers. Standard Dropout~\cite{srivastava_2014} is a regularization method that works by randomly setting a group of neurons at zero after each batch during training. This helps reducing over-fitting by preventing neurons from becoming strongly correlated. But this has no effect on convolutional layers as inputs are spatially correlated. A solution is to use Spatial Dropout~\cite{tompson_2015} which, instead of dropping neurons, drops entire feature maps.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Transformation Layers}
@@ -112,74 +178,12 @@ O_i = K_i \left( I; \theta \right) * I_i + b_i \left( I; \theta \right)
 where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the parameters predicted. In the end, two parameters have to be predicted for each feature map. Experiments showed that this layer works best when placed at the lowest level of the U-Net (see Figure~\ref{fig:unet}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Application: Kidney Segmentation in 3D Ultrasound}
-\label{sec:kidney_seg}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Introduction}
-
-A common (and often disappointing) scenario in clinical settings is to expect an algorithm, built on a specific class of medical images, to succeed at the same task on data judged similar by the clinician. Focusing on the particular class of deep learning-based methods, we propose a transfer approach to, if not instantly, quickly satisfy this expectation. We work under the assumption that no access to the original training database is possible, as it is frequently the case in practice. 
-
-The clinical problem motivating this work is the kidney capsule segmentation in 3D ultrasound data from potentially ill children. These images have a high amount of noise, strong dependency on the operator, and important organ shape variability induced by subjects age and degree of illness. Moreover we have limited access to such volumes. In contrast, a much larger database of ultrasound kidney volumes of healthy adults is available, from which we build a successful segmenting deep network. We aim to transfer this network knowledge. % to the pediatric data. 
-
-This work has contributions in both the clinical and technical domains: (i) a deep learning based algorithm for kidney capsule segmentation in 3D ultrasound data (Section~\ref{sssec:unet}), and (ii) a new approach to perform domain transfer of a pre-trained neural network (Section~\ref{sssec:transfer}). In addition we present experiments comparing different transfer methods according to performance, training time and added complexity to determine the trade-offs of each method (Section~\ref{ssec:exp}), and discuss their results, examining the segmentation errors to suggest potential improvements.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Related Work}
-
-%\subsubsection{Kidney segmentation in 3D ultrasound data}
-
-Despite the clinical potential of 3D kidney ultrasounds, both the number of publications and the data used within are relatively small. Moreover, to the best our knowledge, deep learning techniques have not yet been applied.~\textcite{cerrolaza2014ISBI} and~\textcite{marsousi2017} have addressed the capsule segmentation problem in 3D pediatric data using active shape models and for real-time segmentation using implicit deformable models, respectively. 
-%In fact, we have not found any paper using deep learning for the segmentation of the kidney in 3D ultrasound.
-Nevertheless, deep learning techniques have been applied by~\textcite{ravishankar2017MICCAI} to 2D ultrasound kidney images. Their approach is compelling since they manage to combine deep learning and shape priors by using two networks, first a U-Net for the segmentation, then a convolutional auto-encoder as a shape prior used for regularization.
-
-The baseline to our work (Section~\ref{sssec:baseline}) is the well-known deep learning architecture ``U-Net'' (\textcite{ronneberger2015MICCAI}) and its 3D version (\textcite{cicek2016MICCAI}). 
-
-%DeepMedic is another framework developed for the segmentation of lesions in 3D MR brain images by Kamnitsas \textit{et al.}~\cite{kamnitsas_2017}. The segmentation is done in two parts, first the image go through a 3D convolutional neural network that outputs a segmentation map, which is then refined by a 3D conditional random field. Additionally, the CNN takes as input the image at normal resolution and a down-sampled version in order to incorporate multi-scale features.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Methods}
-
-\subsubsection{Baseline}
-\label{sssec:unet}
-
-The 3D extension (\textcite{cicek2016MICCAI}) of the U-Net (\textcite{ronneberger2015MICCAI}) architecture is our starting point. Its symmetrical structure alternates convolutional layers with down-sampling layers on one side and convolutional layers with up-sampling layers on the other (see Figure~\ref{fig:unet}). At each level, down-sampled feature maps are concatenated to up-sampled ones to enforce attachment to the data. In our adaptation of this architecture we replace the weighted softmax loss by a Dice-based loss, more adapted to our segmentation task. Moreover, introducing Spatial Dropout (\textcite{tompson2015CVPR}) after each convolution-sampling block proved to significantly improve our results by preventing over-fitting.
-
-\begin{figure}
-	\includegraphics[width=0.9\textwidth]{img_transfer/UNet}
-    \caption{U-Net structure with our added transformation and intensity layers.}
-    \label{fig:unet}
-\end{figure}
-
-%We also train the network with Spatial Dropout after each block, just before the down and up-sampling layers. Standard Dropout~\cite{srivastava_2014} is a regularization method that works by randomly setting a group of neurons at zero after each batch during training. This helps reducing over-fitting by preventing neurons from becoming strongly correlated. But this has no effect on convolutional layers as inputs are spatially correlated. A solution is to use Spatial Dropout~\cite{tompson_2015} which, instead of dropping neurons, drops entire feature maps.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Transfer Learning with Transformation Layers}
-\label{sssec:transfer}
-
-Having successfully trained a network on kidney adults data we seek to transfer its knowledge into a new model that will correctly segment pediatric kidneys and still have good performances on adults. Fine tuning is a poor option in our case since it degrades the performance on the adult images.
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Experiments and Results}
-\label{ssec:exp}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Dataset}
-\label{sssec:data}
-
-The ultrasound volumes in our study come from several clinical sites around the world.
-As a result, there is a high variability in the quality of the images, which translates into various amounts of noise and shadows artifacts.
-
-We have a total of 503 healthy adults images, and 64 children, of which about $30 \%$ have hydronephrosis in various stages. The database was split into $80 \%$ of the images used for training, the rest for testing.
-
-The volumes we give to the network have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. The size in voxels was chosen in order to fit the network and a volume on a single NVIDIA TITAN GPU. The resolution was chosen so that each volume would fit entirely in the cube. 
-%Because we are not segmenting fine structures but only the kidneys, a smaller resolution is not vital.
+\section{Results and Discussion}
+\label{sec:kidney_res}
 
 %%%%%%%%%%%%%%%%%%%
-\subsubsection{Baseline}
-\label{sssec:baseline}
+\subsection{Baseline}
+\label{ssec:baseline}
 
 We used Keras (\textcite{chollet2015keras}) with the Tensorflow backend (\textcite{tensorflow2015}). We performed each experiment on five seeds, which impacts both the separation of the data set into training and test sets, and the initialization of the weights of the networks.
 
@@ -188,7 +192,7 @@ Three models are used as baseline: one trained on adults kidneys only, which wil
 These baselines allow us to judge the quality of each transfer method. A good transfer method should perform better (or close to) on the children kidneys than the children only network, while staying close to the performance of the adults only network on the adults. The joint model represents the ideal performance we can hope for on adults and children. Results are displayed in Table~\ref{table:results}, and illustrated in Figure~\ref{fig:mseg}.
 
 %%%%%%%%%%%%%%%%%%%
-\subsubsection{Comparing transfer methods}
+\subsection{Comparing transfer methods}
 
 \begin{table}
 	\centering
@@ -229,7 +233,7 @@ These baselines allow us to judge the quality of each transfer method. A good tr
 
 % 61, 68, 69, 59, 68
 
-In all transfer experiments, the source network is the adults baseline. The transfer is done only on the children dataset, but performances are evaluated on both the adults and children datasets. Besides  fine tuning, we experimented with the types of layers added to the network and their position as described in Section~\ref{sssec:transfer}. The most interesting results are presented below.
+In all transfer experiments, the source network is the adults baseline. The transfer is done only on the children dataset, but performances are evaluated on both the adults and children datasets. Besides fine-tuning, we experimented with the types of layers added to the network and their position as described in Section~\ref{sec:transfo}. The most interesting results are presented below.
 
 In this section, we show that some of the proposed models achieve good results, both quantitatively as shown in Table~\ref{table:results} and qualitatively, as illustrated in Figures~\ref{fig:bad_images} and~\ref{fig:mseg}.
 
@@ -264,12 +268,12 @@ For the transfer methods, the fine tuning easily beats the children baseline, bu
 
 Adding fixed convolutional layers did not work (a, b and c in Figure~\ref{fig:block}. We were able to reach the performance of the fine tuning, but only by adding $3 \times 3 \times 3$ convolutional layers at every position shown in Figure~\ref{fig:unet} (line  ``Convolutions everywhere'' in Table~\ref{table:results}).  This added 23 millions parameters to the network (it originally had 16 millions) and took longer to train than the fine tuning.
 
-``Geometric Input'' means that we predict the parameters of a geometric transformation before the first layer of the network as described in Section~\ref{sssec:transfer}. It is fast to train and beats the children baseline but fine tuning gives better performance. Likewise for ``Intensity'' only, which means putting an intensity layer at the deepest layer of the U-Net.
+``Geometric Input'' means that we predict the parameters of a geometric transformation before the first layer of the network as described in Section~\ref{sec:transfo}. It is fast to train and beats the children baseline but fine tuning gives better performance. Likewise for ``Intensity'' only, which means putting an intensity layer at the deepest layer of the U-Net.
 
 The best results were obtained by combining the geometric input and learning to predict the parameters of an intensity transformation of the feature maps at the lowest level of the U-Net. This position for the intensity transformation works better than the others. This method adds a small amount of parameters, is fast to train and improve the performance more than fine tuning.
 
 %%%%%%%%%%%%%%%%%%%
-\subsubsection{Examining common failures}
+\subsection{Examining common failures}
 
 % \begin{figure}[ht]
 %   \begin{subfigure}[b]{0.5\linewidth}
@@ -315,7 +319,7 @@ Looking at each image individually, we note that a few of them have a very low D
 Looking at the other images, two kinds of failures were dominant. Either there were holes in the segmentation or the segmentation were bigger than the ground truth. Some of these mistakes are shown in Figure~\ref{fig:mseg}. The holes in the segmentation result from a lack of constraint on the shape of the segmentation. A big segmentation containing the ground truth or a segmentation with holes can have a high dice value. Adding constraints to the loss could also help to solve some of the common mistakes. Other ways to alleviate the problem would be to smooth the segmentations or to use a shape model, for example using a Conditional Random Field such as in~\textcite{kamnitsas2017MEDIA}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Conclusion}
-\label{ssec:conclusion}
+\section{Conclusion}
+\label{sec:transfer_conclusion}
 
 We proposed a new transfer method taking advantage of the particularity of the image format of our problem to obtain better results than the more generic fine-tuning. This new method could be applied to other medical imaging problems, with a few caveats. First, if access to the source dataset is possible, joint training on the source and target should be preferred over any transfer method. Second, if changes to the structure of the network are impossible (for example if the architecture is hard-coded in released software), our method cannot be used. Finally, it depends on the nature of the differences between the source and target distributions. Our method is efficient in the case of geometric and/or intensity differences, making it well suited for medical imaging problems.
