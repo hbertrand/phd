@@ -1,4 +1,4 @@
-\documentclass[11pt]{report}
+\documentclass[12pt]{report}
 
 \usepackage[a4paper]{geometry}
 \usepackage[utf8]{inputenc}
@@ -126,11 +126,15 @@
 % \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
 \includeonly{chap_transfer_learning}
 
+\pagenumbering{roman}
+
 \begin{document}
 \maketitle
 
 \dominitoc
 \tableofcontents
+
+\pagenumbering{arabic}
 
 \include{chap_introduction}
 
