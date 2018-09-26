@@ -127,7 +127,7 @@ The baseline to our work (Section~\ref{ssec:unet}) is the well-known deep learni
 
 TODO:
 \begin{itemize}
-    \item Add images to show variability
+    \item Add images to show variability, and before/after pre-processing
 \end{itemize}
 
 The ultrasound volumes in our study come from several clinical sites around the world. As a result, there is a high variability in the quality of the images, which translates into various amounts of noise and shadows artifacts.
@@ -144,7 +144,7 @@ The volumes we give to the network have been down-sampled to a resolution of $4 
 \subsection{3D U-Net}
 \label{ssec:unet}
 
-\begin{figure}
+\begin{figure}[htb]
 	\includegraphics[width=0.9\textwidth]{img_transfer/UNet}
     \caption{U-Net structure with our added transformation and intensity layers.}
     \label{fig:unet}
@@ -172,15 +172,15 @@ These baselines allow us to judge the quality of each transfer method. A good tr
 \subsection{Fine-tuning}
 \label{ssec:baseline_finetune}
 
-TODO:
-\begin{itemize}
-    \item Add graph tuning only 1, 2, n layers
-    \item Training time 7 last, 7 first
-\end{itemize}
-
 The adult baseline network is fine-tuned on the children dataset, resulting in an important drop of performance on the adults and a comparable improvement on the children (see Table~\ref{table:results}). This is obtained by fine-tuning the whole network. 
 
-It is however unnecessary as we show below. Fine-tuning only the last 7 layers of the network or the first 7 is enough to obtain the same results. Between the two options, fine-tuning the last layers is faster since there is no need to back-propagate to the early layers of the network.
+\begin{figure}[htb]
+	\includegraphics[width=0.9\textwidth]{img_transfer/partial_transfer}
+    \caption{Partial fine-tuning. In blue, all the layers up to $x$ are fine-tuned. In orange, all the layers after $x$ are fine-tuned.}
+    \label{fig:partial_transfer}
+\end{figure}
+
+It is however unnecessary as we show below. Fine-tuning only the last 7 convolutional layers of the network or the first 8 is enough to obtain the same results. This corresponds to all the layers before or after the first upsampling layer. Between the two options, fine-tuning the last layers is faster since there is no need to back-propagate to the early layers of the network.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Transformation Layers}
