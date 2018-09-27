@@ -15,23 +15,46 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Defining the Problem}
 
-Plan: split generic/deep learning or by class of methods ?
+The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
 
-==The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable in practice.
+In practice, as it is usually impossible to prove the optimality of a solution without testing them all, the accepted solution is the best found in the budget allocated by the user to the search.
 
-==In practice, as it is usually impossible to prove the optimality of a solution without testing them all, the accepted solution is the best found in the budget allocated by the user to the search.
-
-==Even though this problem appears in all kinds of situation, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
+Even though this problem appears in all kinds of situation, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{As Black-box Optimization}
+\subsection{Notation}
+\label{ssec:notation}
 
-==The hyper-parameter space $\mathcal{X}$ can be seen as a hypercube where each dimension is a hyper-parameter and each point $x$ of this space defines a unique model $f$. The performance of a model is given by a loss function $\mathcal{L}$. The goal of hyper-parameter optimization is to find the combination $x_*$ minimizing the loss function $\mathcal{L}$:
+In this chapter we refer to a \textit{model} as a neural network, even though the black-box methods presented in Section~\ref{ssec:black_box} work for other machine learning models. The \textit{parameters} of a model are the weights of the network which are learned during training. The \textit{hyper-parameters} are the parameters governing the architecture of the networks (such as the number of layers or the type of layers) and the ones governing the training phase (such as the learning rate or the batch size). 
+
+A \textit{hyper-parameter space} $\mathrm{X}$ is a hypercube where each dimension is a hyper-parameter and the boundaries of the hypercube are the boundaries of each hyper-parameter. Each point in the hyper-parameter space is referred to as a \textit{combination} $\mathrm{x} \in \mathrm{X}$. To each combination is associated a value $\mathrm{y}$ corresponding to the performance metric of the underlying neural network on the task it is trained to solve. We name $f$ a function taking as input a combination $\mathrm{x}$, build and train the underlying model and output its performance $\mathrm{y}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Black-box Optimization}
+\label{ssec:black_box}
+
+From the notation of Section~\ref{ssec:notation}, the goal of hyper-parameter optimization is to find the combination $\mathrm{x_*}$ minimizing the performance $\mathrm{y}$ (typically the performance is a loss function, which we want to minimize):
 \begin{equation}
-	x_* = \argmin_{x \in \mathcal{X}} \mathcal{L}(f(x))
+	\mathrm{x_*} = \argmin_{\mathrm{x} \in \mathrm{X}} f(\mathrm{x})
 \end{equation}
 
-==The simplest method is random search. The idea is simply to pick combinations randomly from a uniform distribution. It is surprisingly efficient. This can be explained by the fact that all hyper-parameters are not equally relevant. In practice, only a few have a high impact on the loss~\cite{bergstra2012JMLR}. It is therefore likely to pick quickly a combination with optimal values for those hyper-parameters. Figure~\ref{fig:rs} shows this in a simple case. One of the dimensions clearly has more impact on the loss than the others, and random search allows us to find a better value of this parameter than grid search, for an equal number of tried combinations.
+This is the problem of hyper-parameter optimization viewed as black-box optimization. Methods in this category are independent from the model and could be used for any kind of mathematical function. However the hyper-parameters we are interested in are of a varied nature (continuous, discrete, categorical), limiting us to derivative-free optimization methods. This section is not a review of derivative-free algorithms, but an overview of the popular algorithms used specifically for hyper-parameter optimization.
+
+Additionally, since the function $f$ is a process training a neural network, evaluating a combination is costly in time and computing resources. Moreover we have little understanding of the influence of each hyper-parameter on the performance of the model, resulting in very large boundaries and a much bigger space than needed. Worse, combinations near the boundaries of the hyper-parameter space can build a network too big to fit in the available memory, requiring us to have a way to handle evaluation failures. 
+
+While it is tempting to simply return an extremely bad performance, this cause problems to methods assuming some structure in the hyper-parameter space. For example, a continuous hyper-parameter that gives a smooth output will suddenly have a discontinuity, and a method assuming smoothness might not work anymore. In practice, there are method-dependent solutions to this problem.
+
+\subsubsection{Grid Search}
+
+The most basic method is usually called \textit{grid search}. Exceedingly easy to implement, it simply test every possible combination (typically with uniform sampling for the continuous hyper-parameters). With only a handful of hyper-parameters to optimize and with a function $f$ fast to evaluate, it can be advisable to use as a first step, if only to get sensible boundaries on each hyper-parameter. 
+
+But in the context of deep learning, hyper-parameters are too numerous, meaning there are too many combinations to evaluate, and each evaluation is costly. Also, a typical implementation in nested for-loops goes from one corner of the hyper-parameter space to the opposite corner in order. It is unlikely that the corner the search starts from happens to be an area filled with good models, since combinations in corners are extreme values of hyper-parameters and build atypical neural networks. 
+
+Grid search can still be used with a wide enough sampling of the hyper-parameters to get an idea on where the interesting models are located and refine the boundaries, but even for that other methods are preferable.
+
+\subsubsection{Random Search}
+
+One step above grid search is \textit{random search}. A big limitation of grid search is that the order it goes through the hyper-parameter space is very dependent on the implementation and it always selects the same limited set of values for each hyper-parameter. Random search instead draws the value of each hyper-parameter from a uniform distribution, allowing for a much wider range of explored values.
 
 \begin{figure}[htb]
 	\begin{minipage}[b]{.49\linewidth}
@@ -46,21 +69,20 @@ Plan: split generic/deep learning or by class of methods ?
 	\label{fig:rs}
 \end{figure}
 
-==Can we do better than random search? Instead of picking combinations randomly from a uniform distribution, we could model the loss directly from the hyper-parameters, then pick the most promising configurations from this model. This is the idea behind Bayesian optimization, which we present in details in Section~\ref{sec:bo}.
+Figure~\ref{fig:rs} illustrates this. Given a hyper-parameter space of two continuous hyper-parameters, and at equal number of evaluated combinations, random search finds a better solution. It works because hyper-parameters are not equally relevant. In practice, only a few have a high impact on the performance (\textcite{bergstra2012JMLR}). In the figure, grid search only tested three values of each hyper-parameters while random search tested nine for the same cost!
 
-==The task of building neural networks is well suited to the use of evolutionary algorithms. Networks can be split and combined in many ways due to their graph structure. It can be done at the layer level or even the unit level. Historically, NEAT~\cite{stanley2002EC} was the most efficient algorithm of this kind. More recent approaches such as~\cite{real2017ICML} or~\cite{miikkulainen2017} are able to explore extremely diverse and atypical network structures, while giving state-of-the-art results. They do require however a huge amount of computation.
+In terms of implementation cost, random search requires only the ability to draw uniformly from an interval or a list, making it barely more costly than grid search, largely compensated by the gain in performance.
 
+\subsubsection{Bayesian Optimization}
 
-As a black-box optimisation problem: random search, bayesian optimisation
+Going further requires some assumption about the structure of the hyper-parameter space. Namely, similar values for an hyper-parameter results in similar performance, i.e. some kind of continuity (\textcolor{red}{What's the equivalent of continuous or lipschitz for discrete variables ?}). If there is some structure, we can exploit it.
 
-Random Search~\textcite{bergstra2012JMLR}
-
-GP + Tree of Parzen Estimator~\textcite{bergstra2011NIPS}
-
-CMA-ES
+Bayesian optimization (\textcite{bergstra2011NIPS}), which we present in details in Section~\ref{sec:bo}, does this by modelling $f$ with as few evaluations as possible while searching for the best combination. It comes with a non-trivial implementation cost, though packages are available. In Section~\ref{} we compare the performance of random search and bayesian optimization on a practical task.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{As Meta-learning}
+
+==The task of building neural networks is well suited to the use of evolutionary algorithms. Networks can be split and combined in many ways due to their graph structure. It can be done at the layer level or even the unit level. Historically, NEAT~\cite{stanley2002EC} was the most efficient algorithm of this kind. More recent approaches such as~\cite{real2017ICML} or~\cite{miikkulainen2017} are able to explore extremely diverse and atypical network structures, while giving state-of-the-art results. They do require however a huge amount of computation.
 
 ==Recently, reinforcement learning methods have been considered for this task~\cite{baker2017ICLR}~\cite{zoph2017ICLR}. A neural network called the controller is trained to build other neural networks, extremely efficient for a given task. It offers the possibility of transfer learning by reusing the controller on tasks similar to the initial one. The difficulty is in training the controller, which requires to build and train thousands of networks. 
 
