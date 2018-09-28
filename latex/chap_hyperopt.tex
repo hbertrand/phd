@@ -75,7 +75,7 @@ In terms of implementation cost, random search requires only the ability to draw
 
 \subsubsection{Bayesian Optimization}
 
-Going further requires some assumption about the structure of the hyper-parameter space. Namely, similar values for an hyper-parameter results in similar performance, i.e. some kind of continuity (\textcolor{red}{What's the equivalent of continuous or lipschitz for discrete variables ?}). If there is some structure, we can exploit it.
+Going further requires some assumption about the structure of the hyper-parameter space. Namely, similar values for an hyper-parameter results in similar performance, i.e. some weak notion of continuity. If there is some structure, we can exploit it.
 
 Bayesian optimization (\textcite{bergstra2011NIPS}), which we present in details in Section~\ref{sec:bo}, does this by modelling $f$ with as few evaluations as possible while searching for the best combination. It comes with a non-trivial implementation cost, though packages are available. In Section~\ref{} we compare the performance of random search and bayesian optimization on a practical task.
 
@@ -483,8 +483,9 @@ TODO:
 \begin{itemize}
     \item Results on hyperband
     \item Results on hyperband + bo
-    \item Redo on many seeds
 \end{itemize}
+
+\subsubsection{Setup}
 
 In order to compare the performance of the different hyper-parameter optimization methods, we devised a hyper-parameter space containing 600 models and trained them all on the CIFAR-10 dataset (\textcite{krizhevsky2009}).
 
@@ -494,7 +495,28 @@ Since the goal of the experiment is not to beat the state-of-the-art on the data
 
 We then compare in which order the different methods selected the models. The methods are evaluated on how long it took them to select the best model, but also on the average performance of the models selected, i.e. if we rank the models by their performance, how close were each method from selecting the models in that order.
 
-Figure~\ref{fig:cifar_loss} shows this. The blue points represent the test loss of the models in the order the methods selected them, and the red line shows the minimum loss found at a given time. 
+However one run is not enough to conclude that Bayesian optimization on average is more efficient than random search. Due to the huge computing cost, we cannot do hundreds of runs with different seed and retrain each network every time. But if we do not retrain the network but change the seeds of the search policy, we can simulate hundreds of runs at a low cost. 
+
+There are a total of $600!$ way to explore this space, but because we do not retrain the models, all the randomness in Bayesian optimization is in the choice of the first model, leaving us with only 600 possible paths through this space. We computed them all, then randomly selected 600 ordering for random search.
+
+\subsubsection{Models distribution}
+
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=0.7\linewidth]{img_hyperopt/cifar_hist.png}
+	\caption{Distribution of the models performance.}
+	\label{fig:cifar_hist}
+\end{figure}
+
+Before comparing the search methods, we look at the distribution of models performance in Figure~\ref{fig:cifar_hist}. A few models are really good, most are average and then there is a long trail of progressively worse models. It looks like a skew normal distribution. 
+
+We of course can't extrapolate that every hyper-parameter space will have a distribution like this, but we assume for now that this is the case for hyper-parameter spaces designed in practice.
+
+Since the distribution is not uniform, there is a difference between models in the top $5 \%$ of models and models that have a performance within $5 \%$ of the performance of the best model. In this case, there are 30 models in the top $5 \%$ of models (since there are 600 models), but only 6 are within $5 \%$ of the performance of the best model. In this case, the 30-th best model is within $18 \%$ of the best model.
+
+This distinction is important because it changes our evaluation of the methods. We are not simply interested in the average time to find a model in the top x $\%$ of models, but also in the average time to find a model within x $\%$ of the best model.
+
+\subsubsection{Results}
 
 \begin{figure}[htbp]
 	\begin{subfigure}[b]{\textwidth}
@@ -510,6 +532,35 @@ Figure~\ref{fig:cifar_loss} shows this. The blue points represent the test loss 
 	\label{fig:cifar_loss}
 \end{figure}
 
+First, we look at the order in which models where selected during one run, shown in Figure~\ref{fig:cifar_loss}. The blue points represent the test loss of the models in the order the methods selected them, and the red line shows the minimum loss found at a given time. There is a clear trend present for Bayesian optimization where the combinations evaluated later have low performance, suggesting it did learn to predict correctly the performance of untested combination. In this run, it was also able to find the best model much earlier than random search. Random search looks as expected, models performance is uniformly distributed.
+
+\begin{table}[htb]
+	\centering
+	\begin{tabular}{ | l | c | c | }
+		\hline
+		 & Random Search & Bayesian optimization \\ 
+		\hline
+		Best model & $297 \pm 171$ &  \\
+		\hline
+		Within $1 \%$ & $146 \pm 114$ & \\
+		Within $5 \%$ & $87 \pm 75$ & \\
+		Within $10 \%$ & $54 \pm 52$ & \\
+		\hline
+		Top $1 \%$ & $87 \pm 75$ &  \\
+		Top $5 \%$ & $18 \pm 17$ &  \\
+		Top $10 \%$ & $10 \pm 10$ &  \\
+		\hline
+	\end{tabular}
+	\caption{Average number of draws taken by each method to reach different goals}
+	\label{table:search_average}
+\end{table}
+
+To confirm these trends, we look at the average number of draws taken by each method to reach different goals (Table~\ref{table:search_average}).
+
+Random search took on average 297 draws before finding the best model, which is within expected range of the theoretical value of 300 draws. If we rank the model by their performance, it took random search an average of 18 draws to find a model in the top $5\%$ and 87 to find a model in the top $1\%$.
+
+[TODO add BO]
+
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/bo_error_time.png}
@@ -524,7 +575,7 @@ This section describes and extends work presented at ISBI 2017 (\textcite{bertra
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dataset and Problem Description}
 
-\begin{figure}
+\begin{figure}[htb]
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
                 \includegraphics[width=.95\linewidth]{img_hyperopt/Abdomen_785}
@@ -566,7 +617,7 @@ This section describes and extends work presented at ISBI 2017 (\textcite{bertra
 
 Given an MRI volume we would like to know which anatomical regions are contained in it and their position in the volume. Since MRI data are acquired in a slice by slice approach, we reduce the problem to a two dimensional classification task of axial slices (into head, chest, abdomen, pelvis, legs and spine).
 
-\begin{table}
+\begin{table}[htb]
 	\centering
 	\begin{tabular}{ | l | c | r | }
 		\hline
