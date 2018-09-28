@@ -1,8 +1,13 @@
+import h5py
 import numpy as np
+import pickle
+from scipy.misc import imresize
+from scipy.io import loadmat
 import scipy.stats as ss
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from matplotlib.ticker import NullFormatter
 
 from gaussian_process import GaussianProcess
@@ -101,6 +106,23 @@ def random_search(points='no', show=False):
 
 
 def gaussian_process(kernel, nb_training_points=6, nb_samples=10, plot_dist=False, plot_gt=True, save=None):
+    """
+    Fit and plot a Gaussian process.
+
+    # Parameters
+        * kernel: an object deriving from gaussian_process.Kernel
+            Kernel used to fit the GP
+        * nb_training_points: int, default 6
+            How many points to fit
+        * nb_samples: int, default 10
+            How many samples to draw
+        * plot_dist: bool, default False
+            If True, plot the mean and 95% confidence interval of the GP
+        * plot_gt: bool, default True
+            If True, plot the true underlying function
+        * save: str, default None
+            if not None, save fig under save
+    """
     # Prepare training and test set
     def f(x):
         return 2 * np.sin(2*x) / x
@@ -112,7 +134,7 @@ def gaussian_process(kernel, nb_training_points=6, nb_samples=10, plot_dist=Fals
     x_train = x[:nb_training_points]
     y_train = f(x_train)
 
-    x_pred = np.linspace(-1, 12., 100)
+    x_pred = np.linspace(-1, 12., 1000)
     y = f(x_pred)
 
     # Fit and predict
@@ -165,7 +187,6 @@ def gaussian_process(kernel, nb_training_points=6, nb_samples=10, plot_dist=Fals
 
 
 def gaussian_process_ei():
-    import seaborn as sns
     from sklearn.gaussian_process import GaussianProcessRegressor
     from matplotlib.animation import FuncAnimation
 
@@ -176,7 +197,6 @@ def gaussian_process_ei():
 
     def f(x):
         return 2 * np.sin(2*x) / x
-        # return np.sin(x*3) * x
 
     x = np.linspace(0.1, 10., 1000)
     y = f(x)
@@ -185,9 +205,9 @@ def gaussian_process_ei():
     x_pred = x
 
     color = sns.diverging_palette(15, 255, n=9, s=90, l=40)
-    fig = sns.plt.figure(figsize=(12, 4))
+    fig = plt.figure(figsize=(12, 4))
     sns.set_style("dark")
-    ax = sns.plt.Axes(fig, [0., 0., 1., 1.])
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
     fig.add_axes(ax)
 
     class UpdateAnim(object):
@@ -199,26 +219,26 @@ def gaussian_process_ei():
 
             self.ax = ax
 
-            sns.plt.xlim([0.1, 10.])
-            sns.plt.ylim([-5.2, 4.])
+            plt.xlim([0.1, 10.])
+            plt.ylim([-5.2, 4.])
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
 
             y_tmp = np.zeros(x_pred.shape)
-            self.std, = sns.plt.fill(np.concatenate([x_pred, x_pred[::-1]]),
+            self.std, = plt.fill(np.concatenate([x_pred, x_pred[::-1]]),
                                      np.concatenate([y_tmp - 1.96, (y_tmp + 1.96)[::-1]]),
                                      alpha=.4, fc=color[7], ec='None', label="95% confidence interval",
                                      animated=True)
-            self.pred_plot, = sns.plt.plot([], [], c=color[8], lw=3, label=u'Prediction', animated=True)
-            self.ei_plot, = sns.plt.plot([], [], c=sns.xkcd_rgb["deep green"], lw=3, animated=True)
-            self.points = sns.plt.scatter([], [], facecolors=color[0], s=80, animated=True, zorder=5)
-            self.last_point = sns.plt.scatter([], [], facecolors=sns.xkcd_rgb["dark plum"], s=100, animated=True,
+            self.pred_plot, = plt.plot([], [], c=color[8], lw=3, label=u'Prediction', animated=True)
+            self.ei_plot, = plt.plot([], [], c=sns.xkcd_rgb["deep green"], lw=3, animated=True)
+            self.points = plt.scatter([], [], facecolors=color[0], s=80, animated=True, zorder=5)
+            self.last_point = plt.scatter([], [], facecolors=sns.xkcd_rgb["dark plum"], s=100, animated=True,
                                               zorder=5)
-            self.marker = sns.plt.scatter([], [], marker='p', facecolors=sns.xkcd_rgb["very dark green"],
+            self.marker = plt.scatter([], [], marker='p', facecolors=sns.xkcd_rgb["very dark green"],
                                           s=120, animated=True, zorder=5)
 
         def init(self):
-            sns.plt.plot(x, y, c=color[1], lw=3, label=u'Truth')
+            plt.plot(x, y, c=color[1], lw=3, label=u'Truth')
 
             self.x_train = self.x_train_ori
             self.x_pred = self.x_pred_ori
@@ -263,10 +283,10 @@ def gaussian_process_ei():
 
     ud = UpdateAnim(ax, x_train, x_pred)
     ani = FuncAnimation(fig, ud, frames=np.arange(200), init_func=ud.init, interval=100, blit=True, repeat=False)
-    ani.save('/mnt/disk2/bertrand/datasets/to_send/pp/gp_ei.mp4', extra_args=['-vcodec', 'libx264'])
+    ani.save('figs/gp_ei.mp4', extra_args=['-vcodec', 'libx264'])
 
-    sns.plt.show()
-    sns.plt.close()
+    plt.show()
+    plt.close()
 
 
 def gaussian_processes_marginal(show=False):
@@ -349,81 +369,166 @@ def gaussian_processes_marginal(show=False):
     sns.plt.close()
 
 
-def paper_vol_slice():
-    from medisys_dl.dataset import hdf5_dict
-    from keras.models import model_from_json
-
+def fullbody_prediction(save=None):
     # Load data
-    dataset = hdf5_dict("/mnt/disk2/bertrand/datasets/hdf5/id_1411.hdf5")
-    x = np.array(dataset['x'], dtype=np.uint16)
-    n_s = x.shape[0]
-    x = x.reshape((n_s, 1, 128, 128))
+    dataset = h5py.File("data/id_1411.hdf5", 'r')
+    x = np.array(dataset['x'], dtype=np.uint8)
+    x = x.reshape((-1, 1, 128, 128))
+    x = np.array([imresize(x[i, 0], (96, 96)) for i in range(x.shape[0])]).reshape((-1, 1, 96, 96))
     y = np.array(dataset['y'], dtype=np.uint32)
 
-    # Load best model
-    dir_clf = "/mnt/disk2/bertrand/results/MRSearch/hyperopt/HCAPLS_512_4_V2_hyperband_gp_ei/model_292/"
-    with open("{0}model.json".format(dir_clf), 'r') as f:
-        classifier = model_from_json(f.read())
-    classifier.load_weights("{0}weights.27.h5".format(dir_clf))
-    classifier.compile(loss="categorical_crossentropy", optimizer='sgd')
+    # Load predictions
+    res = loadmat("data/fullbody_FOV.mat")
+    pred = np.array(res['output'])
+    pred_smooth = np.array(res['probas']).T
+    pred_final = np.array(res['f_probas']).T
 
-    pred = classifier.predict(x)
-    print(pred.shape)
-
-    # entropy = np.sum(pred * np.log(pred + 1e-15), 1)
-    # entropy = (entropy - entropy.min()) / (entropy.max() - entropy.min())
-    # y_pred = np.argmax(pred > 0.7, 1)
-    # y_pred = np.array([y_pred[i] if entropy[i] > 0.5 else 4 for i in range(n_s)])
-
-    dim_0, dim_1 = np.where(pred > 0.7)
-    y_pred = np.ones(len(pred)) * 7
-    for i in range(len(pred)):
-        if i in dim_0:
-            y_pred[i] = dim_1[np.where(dim_0 == i)[0][0]]
-    y_pred = y_pred.astype(int)
-
-    class_change = [np.where(y == 0)[0],
+    class_change = [np.where(np.isin(y, [0, 1]))[0],
                     np.where(y == 2)[0],
                     np.where(y == 3)[0],
                     np.where(y == 4)[0],
                     np.where(y == 5)[0]]
 
-    import seaborn as sns
+    f, ax = plt.subplots(4, 1, figsize=(8, 10))
 
-    f, ax = sns.plt.subplots(2, 1)
-
-    img = np.repeat(x[:, 0, :, 64].T, 5, 0)
-    ax[1].matshow(img, zorder=1, cmap=plt.get_cmap("Greys_r"))
-    ax[1].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off',
+    # Plot image
+    img = np.repeat(x[:, 0, :, 48].T, 5, 0)
+    ax[0].matshow(img, zorder=1, cmap=plt.get_cmap("Greys_r"))
+    ax[0].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off',
                       labelleft='off', labeltop='off')
+    ax[0].axis('off')
 
     grad = sns.color_palette('bright')
 
-    s = [np.ones(class_change[i].shape[0]) for i in range(len(class_change))]
     for i in range(len(class_change)):
-        ax[1].fill_between(class_change[i], s[i] * -1., s[i] * 128. * 5., color=grad[i], alpha=0.3, zorder=2)
+        rect = Rectangle((class_change[i].min() + 3, 1), len(class_change[i]) - 8, 96. * 5. - 5,
+                         edgecolor=grad[i], facecolor='none', linewidth=3, zorder=2)
+        ax[0].add_patch(rect)
 
-    for i in range(y_pred.shape[0]):
-        if y_pred[i] < 6:
-            ax[0].fill_between((i, i), (-1., -1.), (2., 2.), color=grad[y_pred[i]], alpha=0.5)
+    # Raw prediction
+    # for i in range(pred.shape[0]):
+    #     if np.max(pred[i]) > 0.7:
+    #         ax[1].fill_between((i, i), (-1., -1.), (2., 2.), color=grad[np.argmax(pred[i])], alpha=0.1)
 
     for i in range(pred.shape[1]):
-        ax[0].plot(np.arange(n_s), pred[:, i], label=['Head', 'Chest', 'Abdomen', 'Pelvis', 'Legs', 'Spine'][i])
+        ax[1].plot(np.arange(pred.shape[0]), pred[:, i], color=grad[i],
+                   label=['Head', 'Chest', 'Abdomen', 'Pelvis', 'Legs', 'Spine'][i])
 
-    ax[0].set_xlim([0., n_s])
-    ax[0].set_ylim([-0.05, 1.05])
-    ax[0].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off')
+    ax[1].set_xlim([0., pred.shape[0]])
+    ax[1].set_ylim([-0.02, 1.02])
+    ax[1].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off')
 
-    legend = ax[0].legend(loc='center left', frameon=True, shadow=True)
-    legend.get_frame().set_facecolor("#DDDDDD")
-    for label in legend.get_texts():
-        label.set_fontsize('large')
-    for label in legend.get_lines():
-        label.set_linewidth(10)
-    sns.plt.tight_layout()
-    f.subplots_adjust(hspace=0., wspace=0.)
+    # Smoothed prediction
+    for i in range(pred_smooth.shape[1]):
+        ax[2].plot(np.arange(pred_smooth.shape[0]), pred_smooth[:, i], color=grad[i],
+                   label=['Head', 'Chest', 'Abdomen', 'Pelvis', 'Legs', 'Spine'][i])
 
-    sns.plt.show()
+    ax[2].set_xlim([0., pred_smooth.shape[0]])
+    ax[2].set_ylim([-0.02, 1.02])
+    ax[2].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off')
+
+    # Final prediction
+    for i in range(pred_final.shape[1]):
+        ax[3].plot(np.arange(pred_final.shape[0]), pred_final[:, i], color=grad[i],
+                   label=['Head', 'Chest', 'Abdomen', 'Pelvis', 'Legs', 'Spine'][i])
+
+    ax[3].set_xlim([0., pred_final.shape[0]])
+    ax[3].set_ylim([-0.02, 1.02])
+    ax[3].tick_params(axis='both', which='both', bottom='off', top='off', left='off', right='off', labelbottom='off')
+
+    legend = ax[3].legend(loc='lower left', mode="expand", bbox_to_anchor=(0, -0.18, 1, 0.1), ncol=6,
+                          frameon=True, shadow=True, fontsize='large', facecolor="#FFFFFF", fancybox=True)
+    for label in legend.legendHandles:
+        label.set_linewidth(8)
+    plt.tight_layout()
+    f.subplots_adjust(hspace=0.02, wspace=0., bottom=0.05)
+
+    if save is None:
+        plt.show()
+    else:
+        plt.savefig(save)
+    plt.close()
+
+
+def plot_model_perfs_in_policy_order(policy_log, save=None):
+    with open(policy_log, 'rb') as f:
+        perfs = pickle.load(f)
+
+    min_loss = [perfs[0]]
+    for i in range(1, len(perfs)):
+        if perfs[i] < min_loss[-1]:
+            min_loss.append(perfs[i])
+        else:
+            min_loss.append(min_loss[-1])
+
+    min_loss = np.array(min_loss)
+
+    x = np.arange(1, len(perfs) + 1)
+
+    sns.set()
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(x, min_loss, color='r', linewidth=3, drawstyle="steps-post")
+    plt.scatter(x, perfs, color='b', s=20)
+
+    plt.xlim([0., x[-1] + 1])
+    plt.xlabel("Models in training order", fontsize=20)
+    plt.ylim([perfs.min() * .9, np.percentile(perfs, 95) * 1.05])
+    plt.ylabel("Test loss", fontsize=20)
+
+    plt.tight_layout()
+    if save is None:
+        plt.show()
+    else:
+        plt.savefig(save)
+    plt.close()
+
+
+def plot_histogram(policy_log, save=None):
+    with open(policy_log, 'rb') as f:
+        perfs = pickle.load(f)
+
+    print(perfs.mean(), perfs.std(), perfs.min(), len(perfs))
+    perfs.sort()
+    print(perfs[0], perfs[29], perfs[29] / perfs[0])
+    plt.hist(perfs, 20)
+    plt.xlim(perfs.min(), perfs.max())
+
+    plt.tight_layout()
+    if save is None:
+        plt.show()
+    else:
+        plt.savefig(save)
+    plt.close()
+
+
+def print_perfs(perfs_log):
+    with open(perfs_log, 'rb') as f:
+        perfs = pickle.load(f)
+
+    res = np.argmin(perfs, 1)
+    print("Best model ", res.mean(), res.std())
+
+    min_loss = np.min(perfs, 1).mean()
+    loss_10 = 1.1 * min_loss
+    res = np.argmax(perfs <= loss_10, 1)
+    print("10% to best loss ", res.mean(), res.std())
+    loss_5 = 1.05 * min_loss
+    res = np.argmax(perfs <= loss_5, 1)
+    print("5% to best loss ", res.mean(), res.std())
+    loss_1 = 1.01 * min_loss
+    res = np.argmax(perfs <= loss_1, 1)
+    print("1% to best loss ", res.mean(), res.std())
+
+    perc_90 = np.percentile(perfs, 10, 1).mean()
+    res = np.argmax(perfs <= perc_90, 1)
+    print("10% top ", res.mean(), res.std())
+    perc_95 = np.percentile(perfs, 5, 1).mean()
+    res = np.argmax(perfs <= perc_95, 1)
+    print("5% top ", res.mean(), res.std())
+    perc_99 = np.percentile(perfs, 1, 1).mean()
+    res = np.argmax(perfs <= perc_99, 1)
+    print("1% top ", res.mean(), res.std())
 
 
 def make_figures():
@@ -435,13 +540,30 @@ def make_figures():
     # kernel = OrnsteinUhlenbeckKernel(1.)
 
     # GP prior
-    gaussian_process(SquaredExponentialKernel(1.), 0, 5, True, False, save='figs/gp_prior.png')
+    # gaussian_process(SquaredExponentialKernel(1.), 0, 5, True, False, save='figs/gp_prior.png')
+    #
+    # # GP posterior 1 point
+    # gaussian_process(SquaredExponentialKernel(1.), 1, 5, True, False, save='figs/gp_posterior_1_point.png')
+    #
+    # # GP posterior 6 point
+    # gaussian_process(SquaredExponentialKernel(1.), 6, 5, True, False, save='figs/gp_posterior_6_point.png')
+    #
+    # # GP small lengthscale
+    # gaussian_process(SquaredExponentialKernel(.3), 6, 5, True, False, save='figs/gp_lengthscale_small.png')
+    #
+    # # GP big lengthscale
+    # gaussian_process(SquaredExponentialKernel(3.), 6, 5, True, False, save='figs/gp_lengthscale_big.png')
+    #
+    # # GP Matern 5/2 posterior
+    # gaussian_process(Matern52Kernel(1.), 0, 5, True, False, save='figs/gp_matern_prior.png')
+    #
+    # # GP Matern 5/2 posterior
+    # gaussian_process(Matern52Kernel(1.), 6, 5, True, False, save='figs/gp_matern_posterior.png')
+    #
+    # # GP Matern 1/2
+    # gaussian_process(OrnsteinUhlenbeckKernel(1.), 6, 5, True, False, save='figs/gp_matern_12.png')
 
-    # GP posterior 1 point
-    gaussian_process(SquaredExponentialKernel(1.), 1, 5, True, False, save='figs/gp_posterior_1_point.png')
-
-    # GP posterior 6 point
-    gaussian_process(SquaredExponentialKernel(1.), 6, 5, True, False, save='figs/gp_posterior_6_point.png')
+    fullbody_prediction(save="figs/fullbody.png")
 
 
 if __name__ == '__main__':
@@ -452,6 +574,10 @@ if __name__ == '__main__':
 
     # gaussian_processes_marginal(True)
 
-    # paper_vol_slice()
+    # plot_model_perfs_in_policy_order('data/cifar_bo.pkl', 'figs/cifar_bo.png')
+    # plot_model_perfs_in_policy_order('data/cifar_random.pkl', 'figs/cifar_random.png')
 
-    make_figures()
+    # plot_histogram('data/cifar_random.pkl', 'figs/cifar_hist.png')
+    print_perfs('data/random_request_log_aggregate.pkl')
+
+    # make_figures()
