@@ -80,17 +80,20 @@ Going further requires some assumption about the structure of the hyper-paramete
 Bayesian optimization (\textcite{bergstra2011NIPS}), which we present in details in Section~\ref{sec:bo}, does this by modelling $f$ with as few evaluations as possible while searching for the best combination. It comes with a non-trivial implementation cost, though packages are available. In Section~\ref{} we compare the performance of random search and bayesian optimization on a practical task.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{As Meta-learning}
+\subsection{Evolutionary Algorithms}
 
-==The task of building neural networks is well suited to the use of evolutionary algorithms. Networks can be split and combined in many ways due to their graph structure. It can be done at the layer level or even the unit level. Historically, NEAT~\cite{stanley2002EC} was the most efficient algorithm of this kind. More recent approaches such as~\cite{real2017ICML} or~\cite{miikkulainen2017} are able to explore extremely diverse and atypical network structures, while giving state-of-the-art results. They do require however a huge amount of computation.
+The first application of evolutionary algorithms to neural networks was to evolve the weights of a fixed architecture (\textcite{miller1989}). A few years later,~\textcite{braun1993} and~\textcite{angeline1994} realized it was more efficient to evolve simultaneously the weights and the topology of the network. Further refinements of these approaches led to the \textit{NeuroEvolution of Augmenting Topologies} (NEAT) algorithm (\textcite{stanley2002EC}). 
 
-==Recently, reinforcement learning methods have been considered for this task~\cite{baker2017ICLR}~\cite{zoph2017ICLR}. A neural network called the controller is trained to build other neural networks, extremely efficient for a given task. It offers the possibility of transfer learning by reusing the controller on tasks similar to the initial one. The difficulty is in training the controller, which requires to build and train thousands of networks. 
+NEAT uses three kinds of mutations (modifying a weight, adding a connection between two nodes and adding a node in the middle of a connection) and one kind of recombination based on fitness sharing. Many variants of this algorithm have been proposed, notably HyperNEAT (\textcite{stanley2009}) which only evolves the topology and learn the weights by back-propagation. 
 
-==One major advantage of the last two approaches is the ability to use conditional hyper-parameters, i.e. hyper-parameters that must be chosen only if another hyper-parameter was chosen at a particular value. Bayesian Optimization one the one hand and Hyperband on the other hand have no simple way to integrate such hyper-parameters.
+The main drawback of NEAT and its variants is their inability to scale and evolve the large networks typical of modern deep learning.~\textcite{real2017ICML} and~\textcite{miikkulainen2017} developed approaches able to explore extremely diverse and atypical network structures and find architectures with state-of-the-art performance on computer vision tasks such as CIFAR-10. The drawback of those methods however is their excessive computational cost, making them out of our reach.
 
-As a meta-learning problem: learning to learn, architecture learning
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Reinforcement Learning}
 
-Large scale evolution
+Recent advances in reinforcement learning have made possible its use to the design of efficient neural networks. The idea is to train an agent called the controller which build neural networks for a specific task.~\textcite{baker2017ICLR} developed a controller that chooses each layer of the network sequentially and is trained using Q-learning.~\textcite{zoph2017ICLR} created a string representation of neural networks and their controller is a RNN outputting valid strings. In both cases the created networks must be fully trained to be evaluated and the controller takes thousands of iterations to converge, making those approaches extremely costly.
+
+To address this problem,~\textcite{zoph2017} proposed testing on a smaller dataset as an approximation of the performance on the true dataset. Another suggestion is to train only partially each network (\textcite{li2017ICLR},~\textcite{zela2018}), allowing longer training time as the search is refined.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other approaches}
@@ -107,6 +110,10 @@ Extrapolation of learning curves
 \subsection{Synthesis}
 
 Can we unify all those approaches in the same framework ?
+
+Shift from optimizing hyper-parameters to optimizing architectures.
+
+Since recent works in this area focus on optimizing the architecture of neural networks, it is increasingly being called Neural Architecture Search.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Bayesian Optimization}
