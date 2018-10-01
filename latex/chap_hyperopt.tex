@@ -98,18 +98,41 @@ To address this problem,~\textcite{zoph2017} proposed testing on a smaller datas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other approaches}
 
-==In the context of deep learning, the problem can be seen as a multi-armed bandit. The idea is to evaluate the models as soon as possible and discard the unpromising ones without wasting more time training them. The time gained can then be spent testing more models. Section~\ref{ssec:hyperband} describes an algorithm using this concept.
+We finish our tour with a few methods taking radically different approaches. First is Hyperband (\textcite{li2017ICLR}) which considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. We present it in more details in Section~\ref{ssec:hyperband}.
 
-Bandit: Hyperband~\textcite{li2017ICLR}
+\textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial as the model.
 
-Spectral Approach~\textcite{hazan2018ICLR}
-
-Extrapolation of learning curves
+Finally,~\textcite{domhan2015} suggested predicting the learning curve of a model to decide whether to continue the training. The prediction is done using a portfolio of parametric models.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Synthesis}
 
+\begin{sidewaystable}[htbp]
+	\centering
+	\begin{tabular}{ | l | c | c | c | c | c | c | c | c | c | }
+		\hline
+		 & GS & RS & BO - GP & BO - Tree & EA & RL & HB & CS & ELC \\ 
+		\hline
+		Black-box ? & \checkmark & \checkmark & \checkmark & \checkmark & & & & & \\
+		Require structure in $\mathrm{X}$ ? & \checkmark & \checkmark & & & & & \checkmark & & \\
+		Conditional hyper-parameters ? & & & & \checkmark & \checkmark & \checkmark & & & \\
+		Training method hyper-parameters ? & \checkmark & \checkmark & \checkmark & \checkmark & & & \checkmark 1 & \checkmark & \checkmark 1 \\
+		Easy to parallelize ? & & \checkmark & & & \checkmark & \checkmark & \checkmark & & \\
+		Method complexity ? & Low & Low & Mid & Mid & High & High & Mid & High & Mid \\
+		Budget required ? & Mid & Low & Low & Low & High & High & Mid & Low & Low \\
+		\hline
+	\end{tabular}
+	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within x $\%$ mean within x $\%$ of the performance of the best model.}
+	\label{table:hyperopt_compare}
+\end{sidewaystable}
+
 Can we unify all those approaches in the same framework ?
+
+Criteria
+- Can use conditional hyper-params ?
+- Parallel ?
+- Structure of the space ?
+- Architecture only ?
 
 Shift from optimizing hyper-parameters to optimizing architectures.
 
@@ -430,46 +453,25 @@ is already known. The question is then: can we compute $L_{(n+k)}$ from $L_{(n)}
 ==The complexity of the Cholesky decomposition is $O\left(\frac{(n+k)^3}{3}\right)$. In our case, this becomes $O\left(\frac{k^3}{3}\right)$ since it is still necessary to compute the decomposition of the $k$ new points.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Contribution: Combining Bayesian Optimization and Hyperband}
-\label{sec:cap}
+\section{Comparing Random Search and Bayesian Optimization}
 
-This section describes and extend work that was presented at CAp 2017 (\textcite{bertrand2017CAp}).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Hyperband}
-\label{ssec:hyperband}
-
-A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
-
-The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and so on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
-
-But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, we do not know how to find that point and it changes between tasks. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the end.
-
-The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. We chose $R = 27$ minutes and $\eta = 3$, which means that we keep $1/3$ of models at each evaluation.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Combining the methods}
+In this section we study the theoretical performance of random search, before devising an experiment that compares the performance of random search and Bayesian optimization in a practical setting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Random Search Efficiency}
 \label{ssec:random}
 
-TODO:
-\begin{itemize}
-    \item Find where to put this section
-\end{itemize}
-
-How many models of a hyper-parameters space should be trained in order to be reasonably certain to have trained one of the best ? If we knew the loss $l_{min}$ of the best model, how long would it take to find a model with a loss such as $l \leq (1 + \alpha) l_{min}$ ?
+How many models of a hyper-parameters space should be trained in order to be reasonably certain to have trained one of the best ? If we knew the loss $l_{min}$ of the best model, how long would it take to find a model with a loss such as $l \leq (1 + \alpha) l_{min}$ ? Due to the relative simplicity of random search, we can derive theoretical bounds to answer these questions.
 
 Let $N$ be the total number of models in the hyper-parameters space, $M$ the number of models satisfying our performance criteria (alternatively, the $M$ best models of the space) and $n$ the number of models to train.
 
-Considering random search chooses models uniformly, the probability of drawing one of the best model the first time is simply $\frac{M}{N}$. The second time, it is $\frac{M}{N - 1}$ since we do not allow redrawing a model. We can therefore define the probability of not drawing any satisfying models after $n$ draw as:
+Considering random search chooses models uniformly, the probability of drawing one of the best model the first time is simply $\frac{M}{N}$. The second time, it is $\frac{M}{N - 1}$ since we do not allow redrawing a model. We can therefore define the probability of not drawing any satisfying models after $n$ draw as the following equation, where $Y$ is the random variable of failing to draw an acceptable models $n$ draw in a row.
 
 \begin{equation}
     P \left( Y = n \right) = \prod_{k = 0}^{n} \left( 1 -  \frac{M}{N - k} \right)
 \end{equation}
 
-where $Y$ is the random variable of failing to draw an acceptable models $n$ draw in a row. This is a particular case of the hypergeometric distribution. From there, the probability of drawing an acceptable model at the $n$-th draw is:
+This is a particular case of the hypergeometric distribution. From there, the probability of drawing an acceptable model at the $n$-th draw is:
 
 \begin{equation}
     P\left(X = n \right) = \frac{M}{N - n} \prod_{k = 0}^{n - 1} \left( 1 -  \frac{M}{N - k} \right)
@@ -481,16 +483,39 @@ $X$ is the random variable of drawing an acceptable model after $n - 1$ bad draw
     P\left(X \leq n \right) = \sum_{k = 0}^{n} P\left(X = k \right)
 \end{equation}
 
+From this equation we can compute the number of draws required to have drawn a model in the top x $\%$, by setting $M$ as a fraction of $N$. Moreover since the equation depends only of the ratio $\frac{M}{N - k}$, the effect of $k$ becomes negligible as $N$ grows bigger and the equation converges.
 
+\begin{table}[htb]
+	\centering
+	\begin{tabular}{ | l | c | c | c | }
+		\hline
+		 & $p > 0.5$ & $p > 0.95$ & $p > 0.99$ \\ 
+		\hline
+		Top $1 \%$ & 69 & 298 & 458 \\
+		Top $5 \%$ & 14 & 59 & 90 \\
+		Top $10 \%$ & 7 & 29 & 44 \\
+		\hline
+	\end{tabular}
+	\caption{Number of draws required to have drawn a model in the top x $\%$ with probability $p$ in a space of 100 000 combinations.}
+	\label{table:random_search_bounds}
+\end{table}
+
+In Table~\ref{table:random_search_bounds}, we present some of those results, which allow us to draw the following strong conclusion. For any hyper-parameter space, random search will draw a model in the top $5 \%$ of models in 90 draws with a probability of $99 \%$. Less than a hundred draws is sufficient to draw one of the best models of any hyper-parameter space. It is a surprisingly low number given the simplicity of the method.
+
+However that is only one of the question we asked. Ranking the models by their performance does not guarantee that a model in the top x $\%$ is within x $\%$ of the performance of the best model, unless model performance happens to be uniformly distributed. And because we have no idea of how model performance is distributed, we cannot go further in our theoretical analysis. In Section~\ref{ssec:cifar_analysis}, we return to this question by studying the distribution of model performance empirically.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Bayesian Optimization Efficiency}
+
+While we were not able to obtain similar results for Bayesian optimization as we did for random search, we expose some of the difficulties in doing so.
+
+First any analysis depends of the exact setup of Bayesian optimization. A change of kernel or acquisition function changes the results. But the main problem is that because the process learns the structure of the hyper-parameter space, any analysis would need to work in a particular space.
+
+None of those difficulties prevent us from measuring the empirical performance of Bayesian optimization, as we show in the next section.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Experiments on CIFAR-10}
-
-TODO:
-\begin{itemize}
-    \item Results on hyperband
-    \item Results on hyperband + bo
-\end{itemize}
+\label{ssec:cifar_analysis}
 
 \subsubsection{Setup}
 
@@ -543,22 +568,24 @@ First, we look at the order in which models where selected during one run, shown
 
 \begin{table}[htb]
 	\centering
-	\begin{tabular}{ | l | c | c | }
+	\begin{tabular}{ | l | c | c | c | c | }
 		\hline
-		 & Random Search & Bayesian optimization \\ 
+		 & \multicolumn{2}{|c|}{Random Search} & \multicolumn{2}{|c|}{Bayesian optimization} \\ 
+		%\hline
+		& Average & Worst & Average & Worst \\
 		\hline
-		Best model & $297 \pm 171$ &  \\
+		Best model & $297 \pm 171$ & $599$ & $87 \pm 64$ & $249$ \\
 		\hline
-		Within $1 \%$ & $146 \pm 114$ & \\
-		Within $5 \%$ & $87 \pm 75$ & \\
-		Within $10 \%$ & $54 \pm 52$ & \\
+		Within $1 \%$ & $146 \pm 114$ & $554$ & $26 \pm 16$ & $120$ \\
+		Within $5 \%$ & $87 \pm 75$ & $397$ & $17 \pm 11$ & $67$ \\
+		Within $10 \%$ & $54 \pm 52$ & $296$ & $15 \pm 9$ & $44$ \\
 		\hline
-		Top $1 \%$ & $87 \pm 75$ &  \\
-		Top $5 \%$ & $18 \pm 17$ &  \\
-		Top $10 \%$ & $10 \pm 10$ &  \\
+		Top $1 \%$ & $87 \pm 75$ & $397$ & $17 \pm 11$ & $67$ \\
+		Top $5 \%$ & $18 \pm 17$ & $106$ & $10 \pm 8$ & $38$ \\
+		Top $10 \%$ & $10 \pm 10$ & $62$ & $7 \pm 7$ & $36$ \\
 		\hline
 	\end{tabular}
-	\caption{Average number of draws taken by each method to reach different goals}
+	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within x $\%$ mean within x $\%$ of the performance of the best model.}
 	\label{table:search_average}
 \end{table}
 
@@ -566,13 +593,43 @@ To confirm these trends, we look at the average number of draws taken by each me
 
 Random search took on average 297 draws before finding the best model, which is within expected range of the theoretical value of 300 draws. If we rank the model by their performance, it took random search an average of 18 draws to find a model in the top $5\%$ and 87 to find a model in the top $1\%$.
 
-[TODO add BO]
+In comparison, Bayesian optimization did a lot better on every goal. On average it took 87 draws to find the best model and only 17 to find a model in the top $1 \%$. In most cases the worst run of Bayesian optimization performed better than the average run of random search.
 
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/bo_error_time.png}
+	\caption{Model performance predicted by the Gaussian process in red vs the true performance in blue. The colored area is the $95 \%$ prediction interval.}
 	\label{fig:bo_error_time}
 \end{figure}
+
+To confirm whether the Gaussian process is learning the structure of the hyper-parameter space, Figure~\ref{fig:bo_error_time} shows the predicted performance and the true performance, as well as the $95 \%$ prediction interval. As more models are used to refine the Gaussian process, the prediction interval shrinks, i.e. the Gaussian process becomes more confident in its prediction. Prediction for outliers, in this case models that don't learn, is terrible at the beginning and still the main source of error at the end.
+
+\subsection{Conclusion}
+
+We designed an experiment to measure and compare the performance of random search and Bayesian optimization on a setting mimicking real life usage. Performance of random search matched closely theoretical results, showing the surprising efficiency of this method. Bayesian optimization outperformed random search on every metric, which justify its much higher implementation cost.
+
+Analysis of the models performance suggested it is normally distributed, but testing on other tasks with other hyper-parameter space is required. Likewise, while we expect Bayesian optimization to always outperforms random search, further confirmation is required.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Combining Bayesian Optimization and Hyperband}
+\label{sec:cap}
+
+This section describes and extend work that was presented at CAp 2017 (\textcite{bertrand2017CAp}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Hyperband}
+\label{ssec:hyperband}
+
+A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
+
+The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and so on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
+
+But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, we do not know how to find that point and it changes between tasks. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the end.
+
+The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. We chose $R = 27$ minutes and $\eta = 3$, which means that we keep $1/3$ of models at each evaluation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Combining the methods}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
