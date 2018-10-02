@@ -12,6 +12,8 @@
 \usepackage{subcaption}
 \usepackage{bm}
 \usepackage{rotating}
+\usepackage{adjustbox}
+\usepackage{array}
 
 \usepackage{hyperref}
 
@@ -116,6 +118,14 @@
 
 % subsubsection numbering
 \setcounter{secnumdepth}{3}
+
+% Rotation in array
+\newcolumntype{R}[2]{%
+    >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
+    l%
+    <{\egroup}%
+}
+\newcommand*\rota{\multicolumn{1}{R{45}{1em}}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

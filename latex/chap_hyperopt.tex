@@ -100,43 +100,48 @@ To address this problem,~\textcite{zoph2017} proposed testing on a smaller datas
 
 We finish our tour with a few methods taking radically different approaches. First is Hyperband (\textcite{li2017ICLR}) which considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. We present it in more details in Section~\ref{ssec:hyperband}.
 
-\textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial as the model.
+\textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization called Harmonica. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial as the model.
 
 Finally,~\textcite{domhan2015} suggested predicting the learning curve of a model to decide whether to continue the training. The prediction is done using a portfolio of parametric models.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Synthesis}
+\label{ssec:synthesis}
 
 \begin{sidewaystable}[htbp]
 	\centering
 	\begin{tabular}{ | l | c | c | c | c | c | c | c | c | c | }
+		 \rota{} & \rota{Grid Search} & \rota{Random Search} & \rota{Bayesian Optimization - GP} & \rota{Bayesian Optimization - Tree} & \rota{Evolutionary Algorithms} & \rota{Reinforcement Learning} & \rota{Extrapolation of Learning Curves} & \rota{Hyperband} & \rota{Harmonica} \\ 
 		\hline
-		 & GS & RS & BO - GP & BO - Tree & EA & RL & HB & CS & ELC \\ 
-		\hline
-		Black-box ? & \checkmark & \checkmark & \checkmark & \checkmark & & & & & \\
-		Require structure in $\mathrm{X}$ ? & \checkmark & \checkmark & & & & & \checkmark & & \\
+		Black-box ? & \checkmark & \checkmark & \checkmark & \checkmark & & & & & \checkmark \\
+		Does not require structure in $\mathrm{X}$ ? & \checkmark & \checkmark & & & & & & \checkmark & \\
 		Conditional hyper-parameters ? & & & & \checkmark & \checkmark & \checkmark & & & \\
-		Training method hyper-parameters ? & \checkmark & \checkmark & \checkmark & \checkmark & & & \checkmark 1 & \checkmark & \checkmark 1 \\
-		Easy to parallelize ? & & \checkmark & & & \checkmark & \checkmark & \checkmark & & \\
-		Method complexity ? & Low & Low & Mid & Mid & High & High & Mid & High & Mid \\
-		Budget required ? & Mid & Low & Low & Low & High & High & Mid & Low & Low \\
+		Training method hyper-parameters ? & \checkmark & \checkmark & \checkmark & \checkmark & & & $\checkmark^1$ & $\checkmark^1$ & \checkmark \\
+		Easy to parallelize ? & & \checkmark & & & \checkmark & \checkmark & & \checkmark & \\
+		Method complexity ? & Low & Low & Mid & Mid & High & High & Mid & Mid & High \\
+		Budget required ? & Mid & Mid & Low & Low & High\textsuperscript{2} & High\textsuperscript{2} & Low & Mid & Low \\
 		\hline
 	\end{tabular}
-	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within x $\%$ mean within x $\%$ of the performance of the best model.}
+	\caption{Comparison of different hyper-parameter optimization methods according to various criteria explained in Section~\ref{ssec:synthesis}. (1) Except for the number of epoch or training time which is controlled by the method. (2) This is quickly being reduced.}
 	\label{table:hyperopt_compare}
 \end{sidewaystable}
 
-Can we unify all those approaches in the same framework ?
+We have presented a variety of methods that have been used to optimize the hyper-parameters of neural networks. We summarize their advantages and differences in Table~\ref{table:hyperopt_compare} according to several important criteria.
 
-Criteria
-- Can use conditional hyper-params ?
-- Parallel ?
-- Structure of the space ?
-- Architecture only ?
+By black-box we ask whether the method makes any assumption about the model being optimized. Those are the methods that can be reused without modifications to optimize other machine learning models. The second criterion is if the method requires some structure in the hyper-parameter space to work. Would the method still work if we randomly shuffle the mapping from combination to performance ? 
 
-Shift from optimizing hyper-parameters to optimizing architectures.
+The next two criteria are about the kind of hyper-parameters the method can work with. By conditional hyper-parameter we mean hyper-parameters whose relevance depends from the value of another hyper-parameter, for example the number of filters of a convolutional layer is only relevant if the layer exists. The second class of hyper-parameters are the one altering the training of the model instead of its topology, such as the learning rate or the batch size. 
 
-Since recent works in this area focus on optimizing the architecture of neural networks, it is increasingly being called Neural Architecture Search.
+The last three criteria are subjective but relevant when choosing a method to use. If the method allows the training of multiple models at the same time (therefore allowing use of many GPUs) without major changes, we consider it easily parallelizable. The difficulty of understanding and implementing the method is evaluated on a coarse low to high scale. We use the same scale for the budget required to find some of the best models of a hyper-parameter space.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Conclusion}
+
+The first methods used for the optimization of hyper-parameters in neural networks were, without surprise, existing hyper-parameters optimization methods treating the model as black-box and which were developed for other models. While still competitive, they are limited in the architectures of networks they can explore, often working at a layer-level. 
+
+Modern approaches based on evolutionary algorithms or reinforcement learning focus on much more fine-grained architecture choices, at the unit-level. This shift from optimizing hyper-parameters to building architecture is marked notably by the problem increasingly being called Neural Architecture Search. And while those methods are too resource intensive to be used in most cases, this is changing very rapidly. 
+
+But in the context of this thesis we worked with what was the most relevant at the time, namely Bayesian optimization.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Bayesian Optimization}
