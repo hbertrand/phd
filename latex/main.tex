@@ -1,4 +1,4 @@
-\documentclass[12pt]{report}
+\documentclass[12pt,twoside,openright]{report}
 
 \usepackage[a4paper]{geometry}
 \usepackage[utf8]{inputenc}
@@ -14,6 +14,7 @@
 \usepackage{rotating}
 \usepackage{adjustbox}
 \usepackage{array}
+\usepackage{setspace}
 
 \usepackage{hyperref}
 
@@ -77,6 +78,9 @@
     \href{http://dx.doi.org/\thefield{doi}}{\mkbibbold\bgroup\usebibmacro{orig-author}\egroup}%
   }%
 }
+
+% Remove In: in bibliography
+\renewbibmacro{in:}{}
 
 % Augment space between entries in the bibliography
 \setlength\bibitemsep{1.2\itemsep}
@@ -151,9 +155,9 @@
 
 \include{chap_hyperopt}
 
-\include{chap_segmentation}
-
 \include{chap_transfer_learning}
+
+\include{chap_segmentation}
 
 \include{chap_conclusion}
 
@@ -162,6 +166,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \nocite{*}
 
-\printbibliography[heading=bibintoc,title={Bibliography}]
+\defbibnote{clicknote}{Each header is a clickable link to the publication.}
+
+\printbibliography[prenote=clicknote,heading=bibintoc,title={Bibliography}]
 
 \end{document}
