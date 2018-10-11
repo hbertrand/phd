@@ -812,7 +812,7 @@ Bayesian optimization and Hyperband being orthogonal approaches, it seems natura
 
 As a result, Hyperband does not improve the quality of its selection with time, while Bayesian optimization regularly loose time training bad models.
 
-Combining the methods fixes those problems. Model selection is done by Bayesian optimization as described in Section~\ref{sec:bo}, then Hyperband train them as described in Section~\ref{ssec:hyperband}. Two changes are required for Bayesian optimization, as it needs some way to distinguish between fully-trained models and partially trained models. To do that, the training time becomes an hyper-parameter, making the performance of each model at every minute a distinct point. The performance prediction is then done only for the maximum training time, to have only one prediction per model.
+Combining the methods fixes those problems. Model selection is done by Bayesian optimization as described in Section~\ref{sec:bo}, then Hyperband train them as described in Section~\ref{ssec:hyperband}. Two changes are required for Bayesian optimization, as it needs some way to distinguish between fully-trained models and partially trained models. To do that, the training time becomes an hyper-parameter, making the performance of each model at every minute a distinct point. The performance prediction is then done at the training time corresponding to Hyperband's first evaluation, to have only one prediction per model.
 
 The second change is to normalize the values returned by the acquisition function to make it a probability distribution. In the standard usage of Bayesian optimization, the chosen model is the argmax of the acquisition function. Choosing the top x models yield models that are very close as the acquisition function is smooth and gives similar values for nearby combinations. This strategy removes the property of Hyperband to explore many regions of space at the same time. Normalizing the values and drawing from this distribution keeps this property, while making the selection smarter over time as it changes to reflect the knowledge acquired from the trained models.
 
@@ -821,17 +821,15 @@ The proposed algorithm is as follows: the first group of configurations is chose
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Experiments and Results}
 
-We compare the three methods presented above: Bayesian optimization, Hyperband, and Hyperband using Bayesian optimization. The algorithms were implemented in Python using scikit-learn~\textcite{pedregosa2011sklearn} for the Gaussian processes and Keras~\textcite{chollet2015keras} as deep learning framework.
+We compare the three methods presented above: Bayesian optimization, Hyperband, and Hyperband using Bayesian optimization. The algorithms were implemented in Python using scikit-learn~\textcite{pedregosa2011sklearn} for the Gaussian processes and Keras~\textcite{chollet2015keras} as the deep learning framework.
 
-Comparison was done on the CIFAR-10 dataset~\textcite{krizhevsky2009}, which is a classification task on 32x32 images. The image set was split in 50\% for the training set used to train the neural networks, 30\% for the validation set used for the Bayesian model selection and the rest as test set used for the reported results below. 
+Comparison was done on the CIFAR-10 dataset~\textcite{krizhevsky2009}, which is a classification task on $32 \times 32$ images. The image set was split 50\% for the training set used to train the neural networks, 30\% for the validation set used for the Bayesian model selection and the rest as test set used for the reported results below. 
 
-The search is allocated a total budget $B$ in minutes that each policy is free to allocate however it wants. What matters is the best model that could be found in this time. The choice of having a budget in time means that the model will not be trained in epoch as is the most common, but in minutes. This is a practical choice that allows to estimate accurately the total time that will take the search, but it will have the effect of favouring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other.
+Each method is allocated a total budget $B = 4000$ minutes that it is free to allocate however it wants. The choice of having a budget in time means that models will not be trained in epoch as is the most common, but in minutes. This is a practical choice that allows to estimate accurately the total time that the search takes, though it has the effect of favouring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU. The training is done on two NVIDIA TITAN X.
 
-Each method had a budget of 4000 minutes of training on a NVIDIA TITAN X. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU in addition to the consequences pointed in the introduction.
+The chosen architecture is a standard convolutional neural network with varying number of layers, number of filters and filter size per layer. Other hyper-parameters involved in the training method are: the learning rate, the batch size and the presence of data augmentation. In the end there is 6 hyper-parameters to tune for a total of 19 200 possible configurations.
 
-The chosen architecture was a standard convolutional neural network with varying number of layers, number of filters and filter size per layer. Other hyper-parameters involved in the training method are: the learning rate, the batch size and the presence of data augmentation. In the end there were 6 hyper-parameters to tune for a total of 19 200 possible configurations.
-
-For Hyperband, we chose $R = 27$ minutes and $\eta = 3$, which means that $1/3$ of the models are kept at each evaluation.
+For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration and are trained for a maximum of 27 minutes, and $\eta = 3$ which means that $1/3$ of the models are kept at each evaluation. In the case of Bayesian optimization, each model was trained a full $30$ minutes but they are chosen sequentially.
 
 \begin{figure}[htb]
 	\begin{minipage}[b]{.49\linewidth}
@@ -846,30 +844,27 @@ For Hyperband, we chose $R = 27$ minutes and $\eta = 3$, which means that $1/3$ 
 	\label{fig:combining_loss}
 \end{figure}
 
-The metric that matters when comparing methods is the minimum loss of all models tried at a given time, and is illustrated in Fig.~\ref{fig:combining_loss} for the two individual methods and their combination (one run each). 
-These results suggest that Bayesian optimization performs slightly worse than both other methods, and that Hyperband with Bayesian selection finds a better model quicker than Hyperband. However, due to the random nature of the methods, many runs would be needed to draw definite conclusions from Fig.~\ref{fig:combining_loss}. 
+The metric that matters when comparing methods is the loss of the best model found at a given time, and is illustrated in Fig.~\ref{fig:combining_loss} for the two individual methods and their combination (5 run each). 
+These results suggest that Bayesian optimization performs slightly worse than both other methods, and that Hyperband with Bayesian optimization finds a better model quicker than Hyperband. However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this metric. 
 
-It might be more informative to look at the running median of the loss of all models trained at a given time as in Fig.~\ref{fig:combining_loss}. Even if in the end only the best model matters, the running median gives us an idea of the quality of the models tried. Both methods using Bayesian optimization start with a higher median which decreases with time, while Hyperband has a lower median which stays flat and is eventually beaten by Hyperband with Bayesian selection.
-
-One possible explanation is that Bayesian optimization is very exploratory at first and most boundaries of our hyper-parameter space are bad models. It then becomes better as the variance of the Gaussian process diminishes and better combinations are selected.
-
-The fact that Bayesian optimization performs worse in both losses might mean that it is more important to try many models and discard them very quickly over trying less combinations but training them longer.
+It might be more informative to look at the running median of the loss of all models trained at a given time. Even if in the end only the best model matters, the running median gives us an idea of the quality of the models tried. Bayesian optimization performs notably worse than the other two methods. Hyperband and Hyperband + BO have similar performance, though Hyperband + BO seems slightly better.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Discussion}
 
-Due to the part of chance in all three methods, one run is not enough to draw definite conclusions on which of them is best. Ideally we would have used cross-validation on each method and compared the methods on other tasks but lack of time prevented us from doing so and this is left for future work.
+Due to the part of chance in all three methods, five runs are not enough to draw definite conclusions on their performance. Ideally hundreds of runs would have been needed, and the computational cost of this endeavor was the main reason we did not pursue further this problem.
 
-In any case, the results for Hyperband and Bayesian Optimization were consistent with the literature. With a low budget, Hyperband will perform better on average than Bayesian Optimization and should be preferred. It also has the advantage of being easier to implement and to parallelize.
+While the seemingly low performance improvement of combining Hyperband and Bayesian optimization may be discouraging, there were two problems with our specific approach. 
 
-At the end, each policy has trained many models from which we select only one. However we have a few high performing models with very similar error rates but a good diversity in architecture. Selecting the top five or ten and making an ensemble with them would give a very robust classifier. We can even consider applying model distillation on the ensemble to keep the advantages of a small network.
+As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. This was a terrible idea, as the resulting distribution was extremely close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. In effect, this is why our version of Hyperband + BO performed barely better than Hyperband alone. 
 
-The approach of modelling the hyper-parameter space could also be used for transfer learning. One application would be for the same task, but with a bigger dataset containing more data and classes. It can be expected that the model of the hyper-parameter space learned before would be informative for the new dataset and would allow us to find a good model faster.
+One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance has for effect of discouraging the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allow drawing many models simultaneously. 
 
-Closer to the authors' interest would be similar tasks, for example in a medical imaging context, where the methods would have been applied to the classification of images from a particular modality, say MRI as in~\textcite{bertrand2017ISBI}, and we would now like to apply them to the classification of images from another modality, ultrasound for example.
+When drawing a large group of models at the same time like Hyperband requires, the cost of this process becomes important as the Gram matrix of the Gaussian process needs to be inverted many times. The incremental Cholesky decomposition presented in Section~\ref{sec:cholesky} could be used to make the process faster.
 
-- Normalizing was a terrible idea
-- The models ended up being optimized to be fully trained at Hyperband first evaluation, but then most overfit
+Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to be fully trained by the time of Hyperband's first evaluation (after 3 minutes of training) and start overfitting immediately after. This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, though with side effect described.
+
+While using the prediction at 27 minutes instead would avoid the overfitting, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as they study models to extrapolate learning curves.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
