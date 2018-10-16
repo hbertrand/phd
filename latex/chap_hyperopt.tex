@@ -5,7 +5,7 @@
 \label{chap:hyperopt}
 
 \begin{chapabstract}
- Coucou
+This chapter introduces the problem of hyper-parameter optimization for neural networks, which is the problem of automatically finding the optimal architecture and training setting for a particular task. Section~\ref{sec:ho_lit} presents the problem and the existing approaches while Section~\ref{sec:bo} explains in depth the method of Bayesian optimization which is used for the rest of the chapter. A performance improvement of this method is given in Section~\ref{sec:cholesky}. In Section~\ref{sec:compare}, we compare the performance of random search and Bayesian optimization on a toy problem and give theoretical bounds on the performance of random search. We propose a new method in Section~\ref{sec:cap}, which combines Bayesian optimization with another method, Hyperband. Finally, we apply Bayesian optimization to the practical problem of MRI field-of-view classification in Section~\ref{sec:isbi}.
 \end{chapabstract}
 
 \vspace{1cm}
@@ -19,6 +19,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Defining the Problem}
+\label{sec:ho_lit}
 
 The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
 
@@ -868,6 +869,7 @@ While using the prediction at 27 minutes instead would avoid the overfitting, it
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
+\label{sec:isbi}
 
 This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}).
 
@@ -1077,11 +1079,6 @@ The last important factor to consider is the total number of weights. The baseli
 
 \subsection{From probabilities to a decision}
 
-TODO
-\begin{itemize}
-    \item Describe complex decision scheme
-\end{itemize}
-
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/fullbody}
@@ -1095,11 +1092,45 @@ To answer this question, we processed a full body volume by classifying each of 
 %For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. 
 As we can see in Figure~\ref{fig:full_body}, the network is able to identify all body parts, despite the slices being processed independently. Nevertheless the network tends to misclassify the boundaries between regions, notably legs/pelvis and pelvis/abdomen. It also mistakenly identifies the empty slices above the head as being pelvis with a high confidence. This might be indicative of overfitting as those slices contain only noise. Interestingly, the straps used to hold the patient down, visible as the bands with high intensity on the extremities and low intensities on the body, trigger the network every time into the pelvis class. This is likely due to the rarity of those straps in the dataset.
 
-But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), and this approach would give regions broken in multiple parts with messy boundaries.
+But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), and this approach gives regions broken in multiple parts with messy boundaries.
 
-A more robust decision scheme is the following: start by smoothing the probabilities curves with a Gaussian filter, as illustrated in Figure~\ref{fig:full_body}-c. Then, we remark that only certain transitions are valid, i.e. we can go from pelvis to abdomen, but never from pelvis to head.
+A first step is to smooth the probabilities curves with a Gaussian filter, as illustrated in Figure~\ref{fig:full_body}-c. This makes the predictions easier to read, and we can see that on this example the predictions are correct almost everywhere except for the chest. Additionally, the pelvis is preceded and followed by the abdomen, which is of course impossible.
 
-[TODO finish describing decision scheme]
+From this last observation, we note that our goal is to find contiguous anatomical regions, delimited by a starting slice $Z^m_i$ and an ending slice $Z^M_i$, where $i$ is the index of the region in anatomical order (legs - pelvis - abdomen - chest - head) and $Z$ is the slice number. Those boundaries must be such that $\forall i \in [1; N], Z^m_i < Z^M_i$. The network outputs the probability of a slice to belong to a region $P_i \left( Z \right)$.
+
+The optimal boundary slices are the solutions to the following linear program:
+\begin{equation}
+    \begin{array}{ll@{}ll}
+    \text{minimize}  & - \displaystyle\sum\limits_{i=1}^{N} \int_{Z_i^m}^{Z_i^M} P_i(z) dz &\\
+    \text{subject to}&  Z^m_{i+1} \ge Z^M_i,  &i=1 ,..., N
+    \end{array}
+    \label{eq:optimal_boundary}
+\end{equation}
+
+The constraints specify that a region cannot start earlier than the end of the previous region.
+
+The Lagrangian is:
+\begin{equation}
+    \mathcal{L} \left( Z_i^m, Z_i^M, \lambda \right) = - \displaystyle\sum\limits_{i=1}^{N} \int_{Z_i^m}^{Z_i^M} P_i(z) dz
+                                                        - \displaystyle\sum\limits_{i=1}^{N} \lambda_i \left( Z^m_{i+1} - Z_i^M \right)
+\end{equation}
+
+From the partial derivatives, we obtain:
+\begin{align*}
+    \frac{\partial \mathcal{L}}{\partial Z_i^m} &= P_i \left( Z_i^m \right) - \lambda_{i-1} \\
+    \frac{\partial \mathcal{L}}{\partial Z_i^M} &= - P_i \left( Z_i^M \right) + \lambda_{i}
+\end{align*}
+
+Setting the derivatives at zero, the optimal boundary slices must verify:
+\begin{equation}
+    P_i \left( Z_i^M \right) = P_{i+1} \left( Z_{i+1}^m \right)
+\end{equation}
+
+This last constraint means that the boundary slices must be at the intersections between two successive regions. To clarify, a slice where the probability of belonging to the pelvis is equal to the probability of belonging to the abdomen is a potential boundary slice, but an intersection slice between pelvis and head is not.
+
+To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. An example is shown in Figure~\ref{fig:full_body}-d.
+
+This scheme is robust because of its properties: each region is at most one contiguous block (they can also be not present), the regions are always in anatomical order and it allows for many misclassified slices. 
 
 \subsection{Conclusion}
 

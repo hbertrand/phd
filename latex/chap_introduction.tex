@@ -4,59 +4,80 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-\begin{chapabstract}
- Coucou
-\end{chapabstract}
+% \begin{chapabstract}
+%  Coucou
+% \end{chapabstract}
 
-\vspace{1cm}
+% \vspace{1cm}
 
-{   
-    \setstretch{1.0}
-    \minitoc
-}
+% {   
+%     \setstretch{1.0}
+%     \minitoc
+% }
 
-\newpage
+% \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Context}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Medical Imaging}
+This thesis places itself at the intersection of medical image analysis and deep learning, and explores how the recent advances in deep learning can be leveraged to improve the performance on tasks where traditional computer vision where insufficient. 
 
-\subsection{Common tasks}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Medical Imaging}
 
-Classification, segmentation, localization
+Medical imaging is the set of methods allowing to reconstruct the inside of the body in a non-invasive way. It is routinely used by clinicians for diagnosis and surgical planning. Many modalities of images are available, based on different physical principles and each offering different advantages and drawbacks that answer a variety of needs. 
 
-How it's useful to physician.
+From those images, automated methods have been developed to facilitate the work of the clinicians. Tasks such as the segmentation or localization of various body parts and organs, registration between frames of a temporal sequence or slices of a 3D image, or the detection of tumors are well-suited to computer vision methods.
 
-\subsection{Specificity of Medical Images}
+While computer vision methods developed for natural images can be reused, the specificity of medical images should be taken into account. Unlike natural images, medical images have no background, a more limited scope in the objects that are represented, no colors and an intensity that often has a precise meaning depending on the modality.
 
-CT, MR, US
-vs
-natural images
+While these may seem to make the problem simpler at first glance, challenges in medical image analysis come in two categories. First is variability, either intra-subject (changes in the body with time, or during image acquisition as the patient breathe and move) or inter-subject (in the shape, size and location of bones and organs). Variability also comes from external sources: patterns of noise specific to a machine, image resolution and contrasts depending on the image protocol, field-of-view depending on how the clinicians handle the probe, ... 
 
-\subsection{Challenges}
+The second challenge comes from the difficulty of acquiring data and therefore the low amount of data of available. This difficulty is caused by the time and expertise required for the acquisition itself, the sensitivity of the data that adds ethical, administrative and bureaucratic overhead, and sometimes the rarity of a disease.
 
-Lack of data
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Deep Learning}
 
-Sensitivity of the data, ethics
+These last few years, it has been impossible to talk about medical image analysis without talking about deep learning. The inescapable transformation brought with deep learning was made possible with the advent of cheap memory storage and computing power. %It is not, however, the first time artificial neural networks where applied to medical imaging problems.  
 
-Effects of different protocols, machines, physicians on the images...
+This change brought with it its own set of challenges. The huge amount of resources poured into the field results in a deluge of publications where it is difficult to keep up-to-date and separate the noise from the actual progress.
 
-Interpretability of the results
+To give some perspectives on the progress, at the start of this thesis in early 2016: 
+\begin{itemize}
+    \item Tensorflow was just released and a nightmare to install - now it works everywhere from desktop to smartphone and has been cited in over 5000 papers.
+    \item The original GAN paper by Goodfellow \textit{et al} was published mid 2014. Early 2016 they had the reputation of being incredibly difficult to train and unusable outside of toy datasets. Three years and 5000 citations later, GANs have been applied to a wide range of domains, including medical imaging.
+    \item The omnipresent U-Net architecture had just made its debut a few months earlier at MICCAI 2015.
+\end{itemize}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Deep Learning}
-
-Fast moving field, results are obsolete fast.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Transfer Learning}
+In the context of medical imaging, deep learning also bring technical challenges. Two of the most common criticisms are the lack of interpretability of neural networks and the lack of robustness. They are barriers to the adoption of deep learning in clinical use and resolving those issues would open the doors to new tasks such as diagnosis or surgical intervention. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Contributions}
 
+This work contains the following publications:
+\begin{itemize}
+    \item Hadrien Bertrand, Matthieu Perrot, Roberto Ardon and Isabelle Bloch. Classification of MRI data using deep learning and Gaussian process-based model selection. In \textit{IEEE 14th International Symposium on Biomedical Imaging (ISBI)}, 2017.
+    \item Hadrien Bertrand, Roberto Ardon, Matthieu Perrot and Isabelle Bloch. Hyperparameter Optimization of Deep Neural Networks: Combining Hyperband with Bayesian Model Selection. In \textit{Conférence sur l’Apprentissage automatique (CAp)}, 2017.
+\end{itemize}
+
+Additionally, a patent has been filled and is under review for the transfer learning method presented in Chapter~\ref{chap:transfer}.
+
+Finally the following contributions have not been part of any publication yet:
+\begin{itemize}
+    \item A performance improvement of Bayesian optimization by using an incremental Cholesky decomposition. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:cholesky}.
+    \item A theoretical bound on the performance of random search. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:compare}.
+    \item A statistical shape model approach using deep learning. Chapter~\ref{chap:seg}.
+\end{itemize}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Outline}
 
-Structure of the thesis
+This thesis is structured in three parts, each starting with a review of the relevant literature.
+
+Chapter~\ref{chap:hyperopt} discusses the topic of hyper-parameter optimization in the context of deep learning. We focus on three methods: random search, Bayesian optimization and Hyperband, presenting a performance comparison, an improvement and a method combining them. The chapter ends with an application to the problem of MRI field-of-view classification.
+
+Chapter~\ref{chap:transfer} introduces a new transfer learning methods in order to solve the task of segmenting the kidney in 3D ultrasound across two populations: healthy adults and sick children.
+
+Chapter~\ref{chap:seg} returns to the segmentation of the kidney, but using a statistical shape model and a neural network predicting a deformation field for the model.
+
+Chapter~\ref{chap:conclusion} summarizes our conclusions and discusses possible future works.
