@@ -21,22 +21,22 @@ This chapter introduces the problem of hyper-parameter optimization for neural n
 \section{Defining the Problem}
 \label{sec:ho_lit}
 
-The problem of hyper-parameter optimization appears when a model is governed by multiple hyper-parameters that are difficult to manually tune due to a lack of understanding in their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but it grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
+The problem of hyper-parameter optimization appears when a model is governed by numerous hyper-parameters that are difficult to manually tune due to a lack of understanding of their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but its number grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
 
-In practice, as it is usually impossible to prove the optimality of a solution without testing them all, the accepted solution is the best found in the budget allocated by the user to the search.
+In practice, as it is usually impossible to prove the optimality of a solution without testing all solutions, the accepted solution is the best found in the budget allocated by the user to the search.
 
-Even though this problem appears in all kinds of situation, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
+Even though this problem appears in all kinds of situations, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Notation}
+\subsection{Notations}
 \label{ssec:notation}
 
 In this chapter we refer to a \textit{model} as a neural network, even though the black-box methods presented in Section~\ref{ssec:black_box} work for other machine learning models. The \textit{parameters} of a model are the weights of the network which are learned during training. The \textit{hyper-parameters} are the parameters governing the architecture of the networks (such as the number of layers or the type of layers) and the ones governing the training phase (such as the learning rate or the batch size). 
 
-A \textit{hyper-parameter space} $\mathrm{X}$ is a hypercube where each dimension is a hyper-parameter and the boundaries of the hypercube are the boundaries of each hyper-parameter. Each point in the hyper-parameter space is referred to as a \textit{combination} $\mathrm{x} \in \mathrm{X}$. To each combination is associated a value $\mathrm{y}$ corresponding to the performance metric of the underlying neural network on the task it is trained to solve. We name $f$ a function taking as input a combination $\mathrm{x}$, build and train the underlying model and output its performance $\mathrm{y}$.
+A \textit{hyper-parameter space} $\mathrm{X}$ is a hypercube where each dimension is a hyper-parameter and the boundaries of the hypercube are the boundaries of each hyper-parameter. Each point in the hyper-parameter space is referred to as a \textit{combination} $\mathrm{x} \in \mathrm{X}$. To each combination is associated a value $\mathrm{y}$ corresponding to the performance metric of the underlying neural network on the task it is trained to solve. We name $f$ a function taking as input a combination $\mathrm{x}$, build and train the underlying model and output its performance $f\left( \mathrm{x} \right)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Black-box Optimization}
+\subsection{Black-box optimization}
 \label{ssec:black_box}
 
 From the notation of Section~\ref{ssec:notation}, the goal of hyper-parameter optimization is to find the combination $\mathrm{x_*}$ minimizing the performance $\mathrm{y}$ (typically the performance is a loss function, which we want to minimize):
@@ -44,21 +44,21 @@ From the notation of Section~\ref{ssec:notation}, the goal of hyper-parameter op
 	\mathrm{x_*} = \argmin_{\mathrm{x} \in \mathrm{X}} f(\mathrm{x})
 \end{equation}
 
-This is the problem of hyper-parameter optimization viewed as black-box optimization. Methods in this category are independent from the model and could be used for any kind of mathematical function. However the hyper-parameters we are interested in are of a varied nature (continuous, discrete, categorical), limiting us to derivative-free optimization methods. This section is not a review of derivative-free algorithms, but an overview of the popular algorithms used specifically for hyper-parameter optimization.
+This is the problem of hyper-parameter optimization viewed as black-box optimization. Methods in this category are independent from the model and could be used for any kind of mathematical function. However the hyper-parameters we are interested in are of a varied nature (continuous, discrete, categorical), limiting us to derivative-free optimization methods. This section is not a complete review of derivative-free algorithms, but an overview of the popular algorithms used specifically for hyper-parameter optimization.
 
-Additionally, since the function $f$ is a process training a neural network, evaluating a combination is costly in time and computing resources. Moreover we have little understanding of the influence of each hyper-parameter on the performance of the model, resulting in very large boundaries and a much bigger space than needed. Worse, combinations near the boundaries of the hyper-parameter space can build a network too big to fit in the available memory, requiring us to have a way to handle evaluation failures. 
+Additionally, since the function $f$ is a process training a neural network, evaluating a combination is costly in time and computing resources. Moreover we have little understanding of the influence of each hyper-parameter on the performance of the model, resulting in very large boundaries and a much bigger space than needed. The situation is even worse since combinations near the boundaries of the hyper-parameter space can build a network too big to fit in the available memory, requiring to have a way to handle evaluation failures. 
 
-While it is tempting to simply return an extremely bad performance, this cause problems to methods assuming some structure in the hyper-parameter space. For example, a continuous hyper-parameter that gives a smooth output will suddenly have a discontinuity, and a method assuming smoothness might not work anymore. In practice, there are method-dependent solutions to this problem.
+While it is tempting to simply return an extremely bad performance, this causes problems to methods assuming some structure in the hyper-parameter space. For example, a continuous hyper-parameter that gives a smooth output will suddenly have a discontinuity, and a method assuming smoothness might not work anymore. In practice, there are method-dependent solutions to this problem.
 
-\subsubsection{Grid Search}
+\subsubsection{Grid search}
 
-The most basic method is usually called \textit{grid search}. Exceedingly easy to implement, it simply test every possible combination (typically with uniform sampling for the continuous hyper-parameters). With only a handful of hyper-parameters to optimize and with a function $f$ fast to evaluate, it can be advisable to use as a first step, if only to get sensible boundaries on each hyper-parameter. 
+The most basic method is usually called \textit{grid search}. Very easy to implement, it simply tests every possible combination (typically with uniform sampling for the continuous hyper-parameters). With only a handful of hyper-parameters to optimize and with a function $f$ fast to evaluate, it can be advisable to use as a first step to get sensible boundaries on each hyper-parameter, i.e. by testing a handful of values over a very wide range to find a smaller but relevant range.
 
 But in the context of deep learning, hyper-parameters are too numerous, meaning there are too many combinations to evaluate, and each evaluation is costly. Also, a typical implementation in nested for-loops goes from one corner of the hyper-parameter space to the opposite corner in order. It is unlikely that the corner the search starts from happens to be an area filled with good models, since combinations in corners are extreme values of hyper-parameters and build atypical neural networks. 
 
 Grid search can still be used with a wide enough sampling of the hyper-parameters to get an idea on where the interesting models are located and refine the boundaries, but even for that other methods are preferable.
 
-\subsubsection{Random Search}
+\subsubsection{Random search}
 
 One step above grid search is \textit{random search}. A big limitation of grid search is that the order it goes through the hyper-parameter space is very dependent on the implementation and it always selects the same limited set of values for each hyper-parameter. Random search instead draws the value of each hyper-parameter from a uniform distribution, allowing for a much wider range of explored values.
 
@@ -71,7 +71,7 @@ One step above grid search is \textit{random search}. A big limitation of grid s
 		\centering
 		\centerline{\includegraphics[width=7.2cm]{img_hyperopt/rs_random}}
 	\end{minipage}
-	\caption{Loss function for a two dimensional space. (Left) Grid search. (Right) Random search. At equal number of tried combinations, random search finds a better solution.}
+	\caption{Loss function for a two dimensional space. (Left) Grid search. (Right) Random search. 9 combinations were tested for each method, but grid search tested only 3 values for each hyper-parameters while random search tested 9, resulting in a better solution.}
 	\label{fig:rs}
 \end{figure}
 
@@ -79,32 +79,32 @@ Figure~\ref{fig:rs} illustrates this. Given a hyper-parameter space of two conti
 
 In terms of implementation cost, random search requires only the ability to draw uniformly from an interval or a list, making it barely more costly than grid search, largely compensated by the gain in performance.
 
-\subsubsection{Bayesian Optimization}
+\subsubsection{Bayesian optimization}
 
 Going further requires some assumption about the structure of the hyper-parameter space. Namely, similar values for an hyper-parameter results in similar performance, i.e. some weak notion of continuity. If there is some structure, we can exploit it.
 
-Bayesian optimization (\textcite{bergstra2011NIPS}), which we present in details in Section~\ref{sec:bo}, does this by modelling $f$ with as few evaluations as possible while searching for the best combination. It comes with a non-trivial implementation cost, though packages are available. In Section~\ref{sec:compare} we compare the performance of random search and bayesian optimization on a practical task.
+Bayesian optimization (\textcite{bergstra2011NIPS}), which we present in details in Section~\ref{sec:bo}, applies this idea by modeling $f$ with as few evaluations as possible while searching for the best combination. It comes with a non-trivial implementation cost, though packages are available. In Section~\ref{sec:compare} we compare the performance of random search and Bayesian optimization on a practical task.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Evolutionary Algorithms}
+\subsection{Evolutionary algorithms}
 
 The first application of evolutionary algorithms to neural networks was to evolve the weights of a fixed architecture (\textcite{miller1989}). A few years later,~\textcite{braun1993} and~\textcite{angeline1994} realized it was more efficient to evolve simultaneously the weights and the topology of the network. Further refinements of these approaches led to the \textit{NeuroEvolution of Augmenting Topologies} (NEAT) algorithm (\textcite{stanley2002EC}). 
 
-NEAT uses three kinds of mutations (modifying a weight, adding a connection between two nodes and adding a node in the middle of a connection) and one kind of recombination based on fitness sharing. Many variants of this algorithm have been proposed, notably HyperNEAT (\textcite{stanley2009}) which only evolves the topology and learn the weights by back-propagation. 
+NEAT uses three kinds of mutations (modifying a weight, adding a connection between two nodes and adding a node in the middle of a connection) and one kind of recombination based on fitness sharing. Many variants of this algorithm have been proposed, notably HyperNEAT (\textcite{stanley2009}) which only evolves the topology and learns the weights by back-propagation. 
 
 The main drawback of NEAT and its variants is their inability to scale and evolve the large networks typical of modern deep learning.~\textcite{real2017ICML} and~\textcite{miikkulainen2017} developed approaches able to explore extremely diverse and atypical network structures and find architectures with state-of-the-art performance on computer vision tasks such as CIFAR-10. The drawback of those methods however is their excessive computational cost, making them out of our reach.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Reinforcement Learning}
+\subsection{Reinforcement learning}
 
-Recent advances in reinforcement learning have made possible its use to the design of efficient neural networks. The idea is to train an agent called the controller which build neural networks for a specific task.~\textcite{baker2017ICLR} developed a controller that chooses each layer of the network sequentially and is trained using Q-learning.~\textcite{zoph2017ICLR} created a string representation of neural networks and their controller is a RNN outputting valid strings. In both cases the created networks must be fully trained to be evaluated and the controller takes thousands of iterations to converge, making those approaches extremely costly.
+Recent advances in reinforcement learning have made possible its use to design efficient neural networks. The idea is to train an agent called the controller which builds neural networks for a specific task.~\textcite{baker2017ICLR} developed a controller that chooses each layer of the network sequentially and is trained using Q-learning.~\textcite{zoph2017ICLR} created a string representation of neural networks and their controller is a RNN outputting valid strings. In both cases the created networks must be fully trained to be evaluated and the controller takes thousands of iterations to converge, making those approaches extremely costly.
 
 To address this problem,~\textcite{zoph2017} proposed testing on a smaller dataset as an approximation of the performance on the true dataset. Another suggestion is to train only partially each network (\textcite{li2017ICLR},~\textcite{zela2018}), allowing longer training time as the search is refined.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other approaches}
 
-We finish our tour with a few methods taking radically different approaches. First is Hyperband (\textcite{li2017ICLR}) which considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. We present it in more details in Section~\ref{ssec:hyperband}.
+We finish our tour with a few methods taking radically different approaches. Hyperband (\textcite{li2017ICLR}) considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. We present it in more details in Section~\ref{ssec:hyperband}.
 
 \textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization called Harmonica. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial as the model.
 
@@ -119,35 +119,35 @@ Finally,~\textcite{domhan2015} suggested predicting the learning curve of a mode
 	\begin{tabular}{ | l | c | c | c | c | c | c | c | c | c | }
 		 \rota{} & \rota{Grid Search} & \rota{Random Search} & \rota{Bayesian Optimization - GP} & \rota{Bayesian Optimization - Tree} & \rota{Evolutionary Algorithms} & \rota{Reinforcement Learning} & \rota{Extrapolation of Learning Curves} & \rota{Hyperband} & \rota{Harmonica} \\ 
 		\hline
-		Black-box ? & \checkmark & \checkmark & \checkmark & \checkmark & & & & & \checkmark \\
-		Does not require structure in $\mathrm{X}$ ? & \checkmark & \checkmark & & & & & & \checkmark & \\
-		Conditional hyper-parameters ? & & & & \checkmark & \checkmark & \checkmark & & & \\
-		Training method hyper-parameters ? & \checkmark & \checkmark & \checkmark & \checkmark & & & $\checkmark^1$ & $\checkmark^1$ & \checkmark \\
-		Easy to parallelize ? & & \checkmark & & & \checkmark & \checkmark & & \checkmark & \\
-		Method complexity ? & Low & Low & Mid & Mid & High & High & Mid & Mid & High \\
-		Budget required ? & Mid & Mid & Low & Low & High\textsuperscript{2} & High\textsuperscript{2} & Low & Mid & Low \\
+		Black-box? & \checkmark & \checkmark & \checkmark & \checkmark & & & & & \checkmark \\
+		Does not require structure in $\mathrm{X}$? & \checkmark & \checkmark & & & & & & \checkmark & \\
+		Conditional hyper-parameters? & & & & \checkmark & \checkmark & \checkmark & & & \\
+		Training method hyper-parameters? & \checkmark & \checkmark & \checkmark & \checkmark & & & $\checkmark^1$ & $\checkmark^1$ & \checkmark \\
+		Easy to parallelize? & & \checkmark & & & \checkmark & \checkmark & & \checkmark & \\
+		Method complexity? & Low & Low & Mid & Mid & High & High & Mid & Mid & High \\
+		Budget required? & Mid & Mid & Low & Low & High\textsuperscript{2} & High\textsuperscript{2} & Low & Mid & Low \\
 		\hline
 	\end{tabular}
-	\caption{Comparison of different hyper-parameter optimization methods according to various criteria explained in Section~\ref{ssec:synthesis}. (1) Except for the number of epoch or training time which is controlled by the method. (2) This is quickly being reduced.}
+	\caption{Comparison of different hyper-parameter optimization methods according to various criteria explained in Section~\ref{ssec:synthesis}. (1) Except for the number of epochs or training time which is controlled by the method. (2) This is quickly being reduced.}
 	\label{table:hyperopt_compare}
 \end{sidewaystable}
 
 We have presented a variety of methods that have been used to optimize the hyper-parameters of neural networks. We summarize their advantages and differences in Table~\ref{table:hyperopt_compare} according to several important criteria.
 
-By black-box we ask whether the method makes any assumption about the model being optimized. Those are the methods that can be reused without modifications to optimize other machine learning models. The second criterion is if the method requires some structure in the hyper-parameter space to work. Would the method still work if we randomly shuffle the mapping from combination to performance ? 
+By black-box we ask whether the method makes any assumption about the model being optimized. Those are the methods that can be reused without modifications to optimize other machine learning models. The second criterion is if the method requires some structure in the hyper-parameter space to work. Would the method still work if we randomize the mapping from combination to performance? 
 
-The next two criteria are about the kind of hyper-parameters the method can work with. By conditional hyper-parameter we mean hyper-parameters whose relevance depends from the value of another hyper-parameter, for example the number of filters of a convolutional layer is only relevant if the layer exists. The second class of hyper-parameters are the one altering the training of the model instead of its topology, such as the learning rate or the batch size. 
+The next two criteria are about the kind of hyper-parameters the method can work with. By conditional hyper-parameter we mean hyper-parameters whose relevance depends on the value of another hyper-parameter, for example the number of filters of a convolutional layer is only relevant if the layer exists. The second class of hyper-parameters are the one altering the training of the model instead of its topology, such as the learning rate or the batch size. 
 
-The last three criteria are subjective but relevant when choosing a method to use. If the method allows the training of multiple models at the same time (therefore allowing use of many GPUs) without major changes, we consider it easily parallelizable. The difficulty of understanding and implementing the method is evaluated on a coarse low to high scale. We use the same scale for the budget required to find some of the best models of a hyper-parameter space.
+The last three criteria are subjective but relevant when choosing a method to use. If the method allows training multiple models at the same time (therefore allowing using many GPUs) without major changes, we consider it easily parallelizable. The difficulty of understanding and implementing the method is evaluated on a coarse low to high scale. We use the same scale for the budget required to find some of the best models of a hyper-parameter space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Conclusion}
 
 The first methods used for the optimization of hyper-parameters in neural networks were, without surprise, existing hyper-parameters optimization methods treating the model as black-box and which were developed for other models. While still competitive, they are limited in the architectures of networks they can explore, often working at a layer-level. 
 
-Modern approaches based on evolutionary algorithms or reinforcement learning focus on much more fine-grained architecture choices, at the unit-level. This shift from optimizing hyper-parameters to building architecture is marked notably by the problem increasingly being called Neural Architecture Search. And while those methods are too resource intensive to be used in most cases, this is changing very rapidly. 
+Modern approaches based on evolutionary algorithms or reinforcement learning focus on much more fine-grained architecture choices, at the unit-level. This shift from optimizing hyper-parameters to building architecture is marked notably by the problem increasingly being called Neural Architecture Search. While those methods are too resource intensive to be used in most cases, this is changing very rapidly. 
 
-But in the context of this thesis we worked with what was the most relevant at the time, namely Bayesian optimization.
+But in the context of this thesis we worked with what was the most relevant at the time, namely Bayesian optimization, and to some extent, Hyperband.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Bayesian Optimization}
@@ -155,12 +155,12 @@ But in the context of this thesis we worked with what was the most relevant at t
 
 Bayesian Optimization is a method for optimizing the parameters of a black-box that is costly to evaluate. In deep learning the black-box is a neural network and the parameters are the hyper-parameters of the network. Evaluating the network corresponds to training it and computing its performance on the validation set. A recent and general review of the topic can be found in~\textcite{shahriari2016IEEE} where it is treated as an optimization method, while~\textcite{snoek2012NIPS} review the topic in the context of optimizing the hyper-parameters of machine learning models.
 
-There are two components to Bayesian Optimization. The first component is a probabilistic model of the loss function, i.e. a function that takes the values of the hyper-parameters as input and estimate the value of the loss the corresponding neural network would have. Gaussian processes are the typical choice and are presented in Section~\ref{ssec:gp}. 
+There are two components in Bayesian optimization methods. The first component is a probabilistic model of the loss function, i.e. a function that takes the values of the hyper-parameters as input and estimate the value of the loss the corresponding neural network would have. Gaussian processes are the typical choice and are presented in Section~\ref{ssec:gp}. 
 %While other models are available, such as tree-structured Parzen estimators (\textcite{bergstra2011NIPS}), they offer a different set of advantages and weaknesses which we discuss in Section~\ref{ssec:practical}. 
 The second component, called the acquisition function, samples the model of the loss function to select the next set of hyper-parameters to evaluate. Common acquisition functions are presented in Section~\ref{ssec:acqfunc}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Gaussian Processes}
+\subsection{Gaussian processes}
 \label{ssec:gp}
 
 A Gaussian process is a supervised learning model mainly used for regression problems. It is a distribution over functions, i.e. from a set of data points, the Gaussian process gives possible functions that fit those points, weighted by their likelihood. The shape and properties of possible functions are defined by a covariance function. When predicting the value of an unseen point, the Gaussian process returns a Normal distribution, with the variance being an estimation of the uncertainty of the model at this point. Predicting multiple points will result in a joint Gaussian distribution. A comprehensive review of the topic can be found in~\textcite{rasmussen2005}
@@ -168,13 +168,10 @@ A Gaussian process is a supervised learning model mainly used for regression pro
 \subsubsection{Definitions}
 
 Following the notation of Section~\ref{ssec:notation}, we write the Gaussian process as:
-
 \begin{equation}
     \mathrm{y}(\mathrm{x}) \sim \mathcal{GP} \left( m(\mathrm{x}), k(\mathrm{x}, \mathrm{x}) \right)
 \end{equation}
-
 $m(\mathrm{x})$ is the \textit{mean function} and $k(\mathrm{x}, \mathrm{x'})$ is the \textit{covariance function} which specifies the covariance between pair of data points. The mean function is set to $0$ for simplicity. In practice this is ensured by removing the mean of the predicted values from the dataset. The covariance function is used to build the covariance matrix of a set $\mathrm{X}$ of $N$ data points as:
-
 \begin{equation}
     K(\mathrm{X}, \mathrm{X}) = 
     \begin{pmatrix}
@@ -184,13 +181,10 @@ $m(\mathrm{x})$ is the \textit{mean function} and $k(\mathrm{x}, \mathrm{x'})$ i
     k(\mathrm{x_N}, \mathrm{x_1}) & k(\mathrm{x_N}, \mathrm{x_2}) & \cdots & k(\mathrm{x_N}, \mathrm{x_N})
     \end{pmatrix}
 \end{equation}
-
 This matrix is all that is needed to draw samples from the distribution. We pick a set $\mathrm{X_*}$ of points, build the covariance matrix $K(\mathrm{X_*}, \mathrm{X_*})$, then generate samples from this Gaussian distribution:
-
 \begin{equation}
     \mathrm{y_*} \sim \mathcal{N} \left( 0, K(\mathrm{X_*}, \mathrm{X_*})\right)
 \end{equation}
-
 Some such samples are shown in Figure~\ref{fig:gp_prior}. Since no data points were used, this corresponds to an unfitted Gaussian process. 
 
 %The covariance matrix is a Gram matrix, meaning it is positive semi-definite, i.e. it admits a unique Cholesky decomposition
@@ -198,27 +192,24 @@ Some such samples are shown in Figure~\ref{fig:gp_prior}. Since no data points w
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/gp_prior.png}
-	\caption{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process. The thick blue line represents the mean of the distribution and the blue area around is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$)}
+	\caption{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process. The thick blue line represents the mean of the distribution and the blue area around this line is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$)}
 	\label{fig:gp_prior}
 \end{figure}
 
-In probabilistic terms, the unfitted Gaussian process corresponds to the \textit{prior} $p \left( \mathrm{y} \right)$. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*}, \theta \right)$. $\theta$ are the hyper-parameters of the covariance function. We are interested in the \textit{posterior} $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is:
-
+In probabilistic terms, the unfitted Gaussian process corresponds to the \textit{prior} probability $p \left( \mathrm{y} \right)$. Given a set of observed points $(\mathrm{X}, \mathrm{y})$ and a set of points we want to predict $(\mathrm{X_*}, \mathrm{y_*})$, the prior corresponds to $p\left( \mathrm{y_*} | \mathrm{X_*}, \theta \right)$, where $\theta$ denote the set of hyper-parameters of the covariance function. We are interested in the \textit{posterior} probability $p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)$ i.e. the distribution of the new points conditioned on the points we have already observed. From probability theory we know that the posterior is:
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
     =
     \frac{p\left( \mathrm{y}, \mathrm{y_*} | \mathrm{X}, \mathrm{X_*}, \theta \right)}{p\left( \mathrm{y} | \mathrm{X}, \theta \right)}
     \label{eq:posterior}
 \end{equation}
-
 The numerator is called the \textit{joint distribution} and the denominator is the \textit{marginal likelihood}. 
 
 \subsubsection{Inference}
 
-Training a Gaussian process simply means pre-computing $K(\mathrm{X}, \mathrm{X})$, i.e. the covariance between the data points. At inference, we compute the covariance $K(\mathrm{X_*}, \mathrm{X_*})$ between the points we want to predict, and the covariance between the data points and the points we want to predict $K(\mathrm{X}, \mathrm{X_*})$. And since the covariance matrix is by definition symmetrical, $K(\mathrm{X_*}, \mathrm{X}) = K(\mathrm{X}, \mathrm{X_*})^T$. For notational simplicity we denote them $K$, $K_*$ or $K_*^T$ and $K_{**}$.
+Training a Gaussian process simply means pre-computing $K(\mathrm{X}, \mathrm{X})$, i.e. the covariance between the data points. At inference, we compute the covariance $K(\mathrm{X_*}, \mathrm{X_*})$ between the points we want to predict, and the covariance between the data points and the points we want to predict $K(\mathrm{X}, \mathrm{X_*})$. Since the covariance matrix is by definition symmetrical, $K(\mathrm{X_*}, \mathrm{X}) = K(\mathrm{X}, \mathrm{X_*})^T$. For notational simplicity we denote them $K$, $K_*$ or $K_*^T$ and $K_{**}$.
 
 This results in the joint distribution of Equation~\ref{eq:posterior}:
-
 \begin{equation}
     \begin{bmatrix}
     \mathrm{y} \\
@@ -231,17 +222,21 @@ This results in the joint distribution of Equation~\ref{eq:posterior}:
     K(\mathrm{X_*}, \mathrm{X}) & K(\mathrm{X_*}, \mathrm{X_*})
     \end{bmatrix}
     \right)
+    =
+    \mathcal{N} \left( 0, 
+    \begin{bmatrix}
+    K & K_*^T \\
+    K_* & K_{**}
+    \end{bmatrix}
+    \right)
 \end{equation}
-
-However the joint distribution generate functions that do not match the observed data. The posterior is obtained by conditioning the joint distribution to the observations, which are expressed by the marginal likelihood. Because every term involved is a Gaussian distribution, the posterior can be derived to the following equation:
-
+However the joint distribution generate functions that do not match the observed data. The posterior is obtained by conditioning the joint distribution to the observations, which are expressed by the marginal likelihood. Because every term involved is a Gaussian distribution, the posterior can be derived as follows:
 \begin{equation}
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right)
     =
     \mathcal{N} \left( K_* K^{-1} y, 
     K_{**} - K_* K^{-1} K_*^T \right)
 \end{equation}
-
 This is the equation to compute when predicting new points. 
 
 \begin{figure}[htb]
@@ -263,14 +258,12 @@ Figure~\ref{fig:gp_posterior} shows how samples from this distribution look like
 
 \subsubsection{Kernels}
 
-We glossed over the choice of kernel until now. The most common is the one we used so far, the squared exponential kernel:
-
+The most common kernel is the squared exponential kernel:
 \begin{equation}
 	k(\mathrm{x}, \mathrm{x'}) = \sigma^2 \exp\left( -\frac{||\mathrm{x} - \mathrm{x'}||_2^2}{2l^2}\right)
 	\label{eq:sqexp}
 \end{equation}
-
-With this kernel, the influence of a point on the value of another decays exponentially with their relative distance. This implies that the Gaussian process quickly reverts to its prior in areas without observed points.
+With this kernel, the influence of a point on the value of another point decays exponentially with their relative distance. This implies that the Gaussian process quickly reverts to its prior in areas without observed points.
 
 This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ controls the scale of the predicted output and $l$ is a vector of same dimensionality as $\mathrm{x}$ called the characteristic length-scale which measures how much a change along each dimension affects the output. A low value means that a small change in the input results in a big change in the output, as shown in Figure~\ref{fig:gp_lengthscale}. 
 
@@ -289,12 +282,17 @@ This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ c
     \label{fig:gp_lengthscale}
 \end{figure}
 
-The samples from this kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are modelling. In the context of Bayesian optimization, and noting $r = || \mathrm{x} - \mathrm{x'} ||_2$, a more realistic alternative is the Matérn $5/2$ kernel:
+The squared exponential kernel is a special case of the Matérn family of covariance functions which are, noting $r = || \mathrm{x} - \mathrm{x'} ||_2$ defined as follows:
+\begin{equation}
+    k_{\nu}(r) = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)} \left( \sqrt{2\nu} \frac{r}{l}\right)^{\nu} B_{\nu} \left( \sqrt{2\nu} \frac{r}{l}\right)
+\end{equation}
+$\Gamma$ is the gamma function and $B_{\nu}$ is the modified Bessel function of the second kind. The hyper-parameters $\sigma^2$ and $l$ are the same as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel.
+
+The samples from the squared exponential kernel are very smooth, and are in fact infinitely differentiable. This is usually too unrealistic for the process we are modelling. In the context of Bayesian optimization, a more realistic alternative is the Matérn $5/2$ kernel:
 \begin{equation}
     k(r) = \sigma^2 \left( 1 + \frac{\sqrt{5}r}{l} + \frac{5r^2}{3l^2} \right) \exp \left( - \frac{\sqrt{5}r}{l}\right)
 \end{equation}
-
-The Matérn covariance functions are a class of kernel with two parameters $l$ and $\nu$. The hyper-parameters $\sigma^2$ and $l$ have the same role as for the squared exponential kernel and $\nu$ is a measure of how smooth the function is. The chosen value of $\nu = 5/2$ means that the samples will be twice differentiable, $\nu = 1/2$ results in a very rough function while $\nu \to \infty$ is the squared exponential kernel. $\nu = 5/2$ is a good compromise between too smooth and too difficult to optimize $\theta$ as many point estimate methods require twice differentiability (\textcite{snoek2012NIPS}). Figure~\ref{fig:gp_matern} shows what samples from these kernels look like.
+The chosen value of $\nu = 5/2$ means that the samples will be twice differentiable, which is a good compromise between too smooth and too difficult to optimize $\theta$, as many point estimate methods require twice differentiability (\textcite{snoek2012NIPS}). Figure~\ref{fig:gp_matern} shows what samples from these kernels look like.
 
 \begin{figure}[htb]
     \centering
@@ -309,8 +307,7 @@ The Matérn covariance functions are a class of kernel with two parameters $l$ a
     \label{fig:gp_matern}
 \end{figure}
 
-The presented kernels have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It is particularly relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. Depending on the meaning of the hyper-parameters, this may not be desirable. 
-%A solution is to use a non-stationary kernel, which we discuss in Section~\ref{ssec:nosta}.
+The presented kernels have the common property of being stationary, i.e they depend only of $\mathrm{x} - \mathrm{x'}$. They are invariant to translation. It is particularly relevant in the context of hyper-parameter optimization as the kernels make no difference between values of 3 and 2 or 1000 and 999. For hyper-parameters where such a difference matters should use a non-stationary kernel instead of the ones presented above (see~\textcite{paciorek2003NIPS}).
 
 \subsubsection{Learning the kernel hyper-parameters}
 
@@ -320,7 +317,6 @@ There are two ways to learn $\theta$. The first way is to maximize the marginal 
 \begin{equation}
 	\log p\left(\mathrm{y} | \mathrm{X}, \theta \right) = - \frac{1}{2} \mathrm{y}^T K^{-1} \mathrm{y} - \frac{1}{2} \log |K| - \frac{n}{2} \log 2 \pi
 \end{equation}
-
 The optimization can be done with any off-the-shelf method, eventually with multiple restarts as there are no guarantee of a unique optimum. 
 %For example, the scikit-learn (\textcite{pedregosa2011sklearn}) implementation uses BFGS with 10 restarts by default.
 
@@ -329,23 +325,21 @@ The other solution is to not learn $\theta$ at all and instead marginalize the h
     p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y} \right)
     = \int p\left( \mathrm{y_*} | \mathrm{X_*}, \mathrm{X}, \mathrm{y}, \theta \right) p \left( \theta | \mathrm{X}, \mathrm{y} \right) d\theta
 \end{equation}
-
 This integral is usually intractable but can be approximated by sampling methods. \textcite{murray2010NIPS} use slice sampling, \textcite{garbuno2016CSDA} use asymptotically independent Markov sampling and \textcite{titsias2011} review different Monte Carlo methods used for this problem.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Acquisition Functions}
+\subsection{Acquisition functions}
 \label{ssec:acqfunc}
 
-In the context of Bayesian optimization, the Gaussian process gives for each set of hyper-parameters an estimation of the performance of the corresponding model and the uncertainty of the Gaussian process in its estimation. But we do not have a way to decide which model is the most interesting to train. Do we pick a model that will be slightly better than our best current model, i.e. where the Gaussian process gives low uncertainty, or do we pick a model with high uncertainty but which could have terrible performance ? There is an exploration/exploitation trade-off. It is the role of the acquisition function to determine which model to train.
+In the context of Bayesian optimization, the Gaussian process gives for each set of hyper-parameters an estimation of the performance of the corresponding model and the uncertainty of the Gaussian process in its estimation. But we do not have a way to decide which model is the most interesting to train. Do we pick a model that will be slightly better than our best current model, i.e. where the Gaussian process gives low uncertainty, or do we pick a model with high uncertainty but which could have low performance? There is an exploration/exploitation trade-off to be found. It is the role of the acquisition function to determine which model to train.
 
 The oldest acquisition function is the Probability of Improvement (\textcite{kushner1964}). It chooses the model which has the highest probability of having better results than a target, which is usually picked to be the loss of the current best model. The \textit{PI} is defined as below, where $\Phi$ is the Normal cumulative distribution function, $\mathrm{x}$ represents a given set of hyper-parameters, $y_*$ is the minimum loss found so far, $\mu$ is the mean returned by the Gaussian process and $\sigma$ the variance:
 \begin{equation}
     PI(\mathrm{x}) = \Phi \left( \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}\right)
 \end{equation}
+The problem with this function is that it is highly sensitive to the choice of target. The simplest choice is the minimum loss found so far, but the \textit{PI} will then sample models very close to the corresponding model completely ignoring exploration. A better target is how much to improve the minimum loss. But this choice is very inconvenient because we usually have no idea of how much better the performance can get. Should we try to find a model $1 \%$ better? $5 \%$? $25 \%$? If we pick too big an improvement, the function will simply select the models with the highest uncertainty.
 
-The problem with this function is that it is highly sensitive to the choice of target. The simplest is to choose the minimum loss found so far, but the \textit{PI} will then sample models very close to the corresponding model completely foregoing exploration. A better target is how much to improve on the minimum loss. But that's very inconvenient because we usually have no idea how much better we can get. Should we try to find a model $1 \%$ better ? $5 \%$ ? $25 \%$ And if we pick too big of an improvement, the function will simply select the models with the highest uncertainty.
-
-Instead, we can use the Expected Improvement function (\textcite{schonlau1998},~\textcite{jones2001}) which builds on the Probability of Improvement as below where $\phi$ is the normal density function.:
+Instead, we can use the Expected Improvement function (\textcite{schonlau1998},~\textcite{jones2001}) which builds on the Probability of Improvement as below where $\phi$ is the normal density function:
 \begin{equation}
 	EI(\mathrm{x})  = \sigma (\mathrm{x}) [u\Phi(u)+\phi(u)]
 \end{equation}
@@ -353,20 +347,18 @@ with
 \begin{equation}
 	u = \frac{y_* - \mu(\mathrm{x})}{\sigma(\mathrm{x})}
 \end{equation}
-
-\textit{EI} is obtained by taking the expectation of the improvement function (\textcite{shahriari2016IEEE}), defined as:
+The Expected Improvement \textit{EI} is obtained by taking the expectation of the improvement function (\textcite{shahriari2016IEEE}), defined as:
 \begin{equation}
 	I(\mathrm{x}) = \left(y_* - \mu(\mathrm{x}) \right) \mathds{1} \left(y_* > \mu(\mathrm{x}) \right)
 \end{equation}
-
 This function is equal to $0$ if the predicted mean is less than the best loss found so far (which means that there is no improvement), otherwise it is proportional to the gap between the predicted mean and best loss. 
 
-The Expected Improvement has one big advantage over the Probability of Improvement. The target is always the minimum loss found so far, meaning that there is no need to guess a threshold of improvement. 
+The Expected Improvement has a major advantage over the Probability of Improvement. The target is always the minimum loss found so far, meaning that there is no need to guess a threshold of improvement. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Bayesian Optimization}
+\subsection{Bayesian optimization algorithm}
 
-In summary, Bayesian Optimization works as follows. Given a set of explored combinations and their associated models performance, a Gaussian process fitted on that set is used to predict the performance of untested combinations. Then, an acquisition function takes those predictions and decides which combination should be tested next. That combination is tested, added to the set of explored combinations, and the process is repeated as long as resources are available. This process can be seen in Figure~\ref{fig:bo} on a one-dimensional problem. 
+In summary, Bayesian Optimization works as follows. Given a set of explored combinations and their associated models performance, a Gaussian process fitted on that set is used to predict the performance of untested combinations. Then, an acquisition function takes those predictions and decides which combination should be tested next. This combination is tested, added to the set of explored combinations, and the process is repeated as long as resources are available. This process can be seen in Figure~\ref{fig:bo} on a one-dimensional problem. 
 
 \begin{figure}[htb]
 	\centering
@@ -430,7 +422,6 @@ In summary, Bayesian Optimization works as follows. Given a set of explored comb
 The costliest part of Bayesian optimization is the construction of the Gram matrix $K$ and the computation of its invert $K^{-1}$. To reduce that cost, the standard solution is to compute the Cholesky decomposition $L$ of the Gram matrix and invert the decomposition. Every time the Gram matrix is modified, the Cholesky decomposition and its inverse are fully recomputed.
 
 However, Bayesian optimization alters the Gram matrix only by adding new rows and columns corresponding to the covariance between the $n$ older combinations and the $k$ new combinations. The Gram matrix can therefore be decomposed in blocks where one of them is the previous Gram matrix. By calling $K_{(n,n)}$ the previous matrix and $K_{(n+k,n+k)}$ the new one with the added points, the decomposition is:
-
 \begin{equation}
 	K_{(n+k,n+k)} = 
 	\begin{pmatrix}
@@ -438,30 +429,20 @@ However, Bayesian optimization alters the Gram matrix only by adding new rows an
     K_{(k,n)} & K_{(k,k)}
   \end{pmatrix}
 \end{equation}
-
-Likewise, the Cholesky decomposition and its inverse can also be decomposed in blocks where one is the previous Cholesky decomposition as we show in Section~\ref{ssec:formulas}. We then argue that this can be used to make Bayesian optimization faster by updating incrementally the Cholesky decomposition instead of fully recomputing it each time in Section~\ref{ssec:complexity}.
+Likewise, the Cholesky decomposition and its inverse can also be decomposed into blocks where one is the previous Cholesky decomposition as we show in Section~\ref{ssec:formulas}. We then argue in Section~\ref{ssec:complexity} that this can be used to make Bayesian optimization faster by updating incrementally the Cholesky decomposition instead of fully recomputing it each time.
 
 \subsection{Deriving the formulas}
 \label{ssec:formulas}
 
-For recall, the Cholesky decomposition $L_{(n)}$ of a positive definite matrix $K_{(n)}$ is a decomposition of the form:
-
+Let us recall that the Cholesky decomposition $L_{(n)}$ of a positive definite matrix $K_{(n)}$ is a decomposition of the form:
 \begin{equation}
-	L_{(n)} L_{(n)}^T = K_{(n,n)}
+	K_{(n)} = L_{(n)} L_{(n)}^T
 \end{equation}
-
-$L_{(n)}$ is a lower triangular matrix. The decomposition is unique only if $K_{(n)}$ is positive definite. Since $K_{(n)}$ is a Gram matrix, it is always guaranteed to be positive semi-definite, but if the rows and columns are unique (i.e. there are no duplicates data points), then it is positive definite.
-
-Additionally we also recall that a matrix is positive semi-definite if and only if:
-
-\begin{equation}
-	\forall v \in \mathbb{R}^n, \mkern10mu v^T K_{(n,n)} v \geq 0 
-\end{equation}
+where $L_{(n)}$ is a lower triangular matrix. The decomposition is unique only if $K_{(n)}$ is positive definite. Since $K_{(n)}$ is a Gram matrix, it is always guaranteed to be positive semi-definite (i.e. $\forall v \in \mathbb{R}^n, \mkern10mu v^T K_{(n)} v \geq 0$), but if the rows and columns are unique (i.e. there are no duplicate data points), then it is positive definite.
 
 \subsubsection[Formula for the Cholesky decomposition]{Formula for $L_{(n+k)}$}
 
-The block decomposition of the new Cholesky decomposition is:
-
+When adding $k$ points to a Gram matrix of $n$ points, the block decomposition of the new Cholesky decomposition is:
 \begin{alignat*}{2}
 	&&L_{(n+k)} L_{(n+k)}^T &= K_{(n+k,n+k)} \\
 	\Leftrightarrow\mkern40mu
@@ -478,35 +459,30 @@ The block decomposition of the new Cholesky decomposition is:
     K_{(k,n)} & K_{(k,k)}
   \end{pmatrix}
 \end{alignat*}
-
 $B$ is obviously $0$ since a Cholesky decomposition is lower triangular.
 
-By unrolling the block decomposition, we obtain the following equation for $A$:
-
+By developing the block decomposition, we obtain the following equation for $A$:
 \begin{equation*}
 	A A^T + B B^T = A A^T = K_{(n,n)}
 \end{equation*}
-
 Since the Cholesky decomposition is unique, $A = L_{(n)}$. The equation for $C$ is also simple to solve:
-
 \begin{alignat*}{2}
-	&&C A^T + D B &= C L_{(n)}^T = K_{(k,n)} \\
+	&&C A^T + D B^T &= C L_{(n)}^T = K_{(k,n)} \\
 	\Leftrightarrow\mkern40mu
 	&&C &= K_{(k,n)} (L_{(n)}^T)^{-1}
 \end{alignat*}
-
-$D$ is the one requiring the most work. Unrolling the block decomposition, we have:
-
+Solving for $D$ requires more work. Developing the block decomposition, we have:
 \begin{alignat*}{2}
 	&&C C^T + D D^T &= K_{(k,k)} \\
 	\Leftrightarrow\mkern40mu
-	&&D D^T &= K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T
+	&&D D^T &= K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T
 \end{alignat*}
+If we can show that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T$ is definite positive then $D$ is its unique Cholesky decomposition.
 
-If we can show that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is definite positive then $D$ is its unique Cholesky decomposition.
-
-$v^T K_{(n+k,n+k)} v \geq 0$ because $K_{(n+k,n+k)}$ is a Gram matrix. Using its block decomposition and unrolling it, we have:
-
+Let $w \in \mathbb{R}^{n+k} \quad \text{s.t.} \quad w = \begin{pmatrix}
+    u \\
+    v
+  \end{pmatrix}, u \in \mathbb{R}^n, v \in \mathbb{R}^k$, we have $w^T K_{(n+k,n+k)} w \geq 0$ because $K_{(n+k,n+k)}$ is a Gram matrix. Using its block decomposition and developing it, we have:
 \begin{alignat*}{2}
   &&\begin{pmatrix}
     u \\
@@ -531,36 +507,28 @@ $v^T K_{(n+k,n+k)} v \geq 0$ because $K_{(n+k,n+k)}$ is a Gram matrix. Using its
   v^T K_{(k,k)} v
   &\geq 0
 \end{alignat*}
-
-Using three successive change of variables, this equation becomes a second-order polynomial. The first change is $u = K_{(n,n)}^{-1} w$:
-
+Using three successive change of variables, this equation becomes a second-order polynomial. The first change is $u = K_{(n,n)}^{-1} x$:
 \begin{equation*}
-  w^T (K_{(n,n)}^T)^{-1} w + 
-  2 w^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
+  x^T (K_{(n,n)}^T)^{-1} x + 
+  2 x^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
   v^T K_{(k,k)} v
   \geq 0
 \end{equation*}
-
-The second change is $w = t u$ where $t$ is a scalar:
-
+The second change is $x = t y$ where $t$ is a scalar:
 \begin{equation*}
-  t^2 u^T (K_{(n,n)}^T)^{-1} u + 
-  2 t u^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
+  t^2 y^T (K_{(n,n)}^T)^{-1} y + 
+  2 t y^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
   v^T K_{(k,k)} v
   \geq 0
 \end{equation*}
-
-The final change is $u = K_{(k,n)}^T v$:
-
+The final change is $y = K_{(k,n)}^T v$:
 \begin{equation*}
   t^2 v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v + 
   2 t v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
   v^T K_{(k,k)} v
   \geq 0
 \end{equation*}
-
 The determinant of this polynomial verifies:
-
 \begin{alignat*}{2}
   &&4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2 &-
   4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
@@ -572,17 +540,13 @@ The determinant of this polynomial verifies:
   (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
   (v^T K_{(k,k)} v)
 \end{alignat*}
-
 But $v^T K_{(k,k)} v \geq 0$ since $ K_{(k,k)}$ is a Gram matrix (i.e. positive semi-definite), meaning by necessity $v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v \geq 0$ and $K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite.
 
 Therefore, $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite, it is positive definite as long as none of the $k$ new combinations are duplicates of the $n$ previous combinations and $D D^T$ is its Cholesky decomposition.
-
 \begin{equation*}
   D = cho(K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T) = L_{(k)}
 \end{equation*}
-
 The final formula for the incremental Cholesky decomposition is:
-
 \begin{equation}
   L_{(n+k)} = 
   \begin{pmatrix}
@@ -590,13 +554,11 @@ The final formula for the incremental Cholesky decomposition is:
     K_{(k,n)} (L_{(n)}^T)^{-1} & L_{(k)}
   \end{pmatrix}
 \end{equation}
-
 Since this formula requires the costly computation of $L_{(n)}^{-1}$, we would also like to find an incremental formula for it.
 
 \subsubsection[Formula for the inverse Cholesky decomposition]{Formula for $L_{(n+k)}^{-1}$}
 
 A standard expression for the inversion of a block matrix is:
-
 \begin{equation*}
   \begin{pmatrix}
     A & B \\
@@ -607,9 +569,7 @@ A standard expression for the inversion of a block matrix is:
     - (D - C A^{-1} B)^{-1} C A^{-1} & (D - C A^{-1} B)^{-1}
   \end{pmatrix}
 \end{equation*}
-
 Simplifying with $L_{(n+k)}$ found previously, we have:
-
 \begin{equation}
   L_{(n+k)}^{-1} =
   \begin{pmatrix}
@@ -625,7 +585,7 @@ Simplifying with $L_{(n+k)}$ found previously, we have:
 \subsection{Complexity improvement}
 \label{ssec:complexity}
 
-A standard Cholesky decomposition has a complexity of $O \left( (n + k)^3 \right)$ with $n + k$ the number of observed combinations. With our formulas, since we already have $L_{(n)}$, all that is left is to compute $L_{(k)}$, which has a cost of $O \left( k^3 \right)$. Since Bayesian optimization is called after every tested combination, $k = 1$, the Gram matrix just has a new row and a new column. $L_{(k)}$ and its inverse are trivial to compute.
+A standard Cholesky decomposition has a complexity of $O \left( (n + k)^3 \right)$ with $n + k$ the number of observed combinations. With our formulas, since we already have $L_{(n)}$, all that is left is to compute $L_{(k)}$, which has a cost of $O \left( k^3 \right)$. Since Bayesian optimization is called after every tested combination, $k = 1$, the Gram matrix just has one new row and one new column. $L_{(k)}$ and its inverse are trivial to compute.
 
 There is however an increased cost in memory, as $L_{(n)}$ and $L_{(n)}^{-1}$ must be stored between calls of Bayesian optimization. They are two $n \times n$ triangular matrices, storing them cost $O \left( n^2 \right)$, which seems a reasonable price to pay for the performance improvement.
 
@@ -636,32 +596,26 @@ There is however an increased cost in memory, as $L_{(n)}$ and $L_{(n)}^{-1}$ mu
 In this section we study the theoretical performance of random search, before devising an experiment that compares the performance of random search and Bayesian optimization in a practical setting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Random Search Efficiency}
+\subsection{Random search efficiency}
 \label{ssec:random}
 
-How many models of a hyper-parameters space should be trained in order to be reasonably certain to have trained one of the best ? If we knew the loss $l_{min}$ of the best model, how long would it take to find a model with a loss such as $l \leq (1 + \alpha) l_{min}$ ? Due to the relative simplicity of random search, we can derive theoretical bounds to answer these questions.
+How many models of a hyper-parameters space should be trained in order to be reasonably certain to have trained one of the best models? If we knew the loss $l_{min}$ of the best model, how long would it take to find a model with a loss such that $l \leq (1 + \alpha) l_{min}$? Due to the relative simplicity of random search, we can derive theoretical bounds to answer these questions.
 
 Let $N$ be the total number of models in the hyper-parameters space, $M$ the number of models satisfying our performance criteria (alternatively, the $M$ best models of the space) and $n$ the number of models to train.
 
-Considering random search chooses models uniformly, the probability of drawing one of the best model the first time is simply $\frac{M}{N}$. The second time, it is $\frac{M}{N - 1}$ since we do not allow redrawing a model. We can therefore define the probability of not drawing any satisfying models after $n$ draw as the following equation, where $Y$ is the random variable of failing to draw an acceptable models $n$ draw in a row.
-
+Considering that random search chooses models uniformly, the probability of drawing one of the best models the first time is simply $\frac{M}{N}$. The second time, it is $\frac{M}{N - 1}$ since we do not allow redrawing a model. We can therefore define the probability of not drawing any satisfying models after $n$ draws as the following equation, where $Y$ is the random variable of failing to draw an acceptable models among $n$ draws in a row.
 \begin{equation}
     P \left( Y = n \right) = \prod_{k = 0}^{n} \left( 1 -  \frac{M}{N - k} \right)
 \end{equation}
-
 This is a particular case of the hypergeometric distribution. From there, the probability of drawing an acceptable model at the $n$-th draw is:
-
 \begin{equation}
     P\left(X = n \right) = \frac{M}{N - n} \prod_{k = 0}^{n - 1} \left( 1 -  \frac{M}{N - k} \right)
 \end{equation}
-
 $X$ is the random variable of drawing an acceptable model after $n - 1$ bad draws. The probability of drawing an acceptable model in the first $n$ draws is:
-
 \begin{equation}
     P\left(X \leq n \right) = \sum_{k = 0}^{n} P\left(X = k \right)
 \end{equation}
-
-From this equation we can compute the number of draws required to have drawn a model in the top x $\%$, by setting $M$ as a fraction of $N$. Moreover since the equation depends only of the ratio $\frac{M}{N - k}$, the effect of $k$ becomes negligible as $N$ grows bigger and the equation converges.
+From this equation we can compute the number of draws required to have drawn a model in the top $\alpha \%$, by setting $M$ as a fraction of $N$. Moreover since the equation depends only of the ratio $\frac{M}{N - k}$, the effect of $k$ becomes negligible as $N$ grows bigger and the equation converges.
 
 \begin{table}[htb]
 	\centering
@@ -674,20 +628,20 @@ From this equation we can compute the number of draws required to have drawn a m
 		Top $10 \%$ & 7 & 29 & 44 \\
 		\hline
 	\end{tabular}
-	\caption{Number of draws required to have drawn a model in the top x $\%$ with probability $p$ in a space of 100 000 combinations.}
+	\caption{Number of draws required to have drawn a model in the top $\alpha \%$ with probability $p$ in a space of 100 000 combinations.}
 	\label{table:random_search_bounds}
 \end{table}
 
 In Table~\ref{table:random_search_bounds}, we present some of those results, which allow us to draw the following strong conclusion. For any hyper-parameter space, random search will draw a model in the top $5 \%$ of models in 90 draws with a probability of $99 \%$. Less than a hundred draws is sufficient to draw one of the best models of any hyper-parameter space. It is a surprisingly low number given the simplicity of the method.
 
-However that is only one of the question we asked. Ranking the models by their performance does not guarantee that a model in the top x $\%$ is within x $\%$ of the performance of the best model, unless model performance happens to be uniformly distributed. And because we have no idea of how model performance is distributed, we cannot go further in our theoretical analysis. In Section~\ref{ssec:cifar_analysis}, we return to this question by studying the distribution of model performance empirically.
+However that is only one of the questions we asked. Ranking the models by their performance does not guarantee that a model in the top $\alpha \%$ is within $\alpha \%$ of the performance of the best model, unless model performance happens to be uniformly distributed. Since we have no idea of how model performance is distributed, we cannot go further in our theoretical analysis. In Section~\ref{ssec:cifar_analysis}, we return to this question by studying empirically the distribution of model performance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Bayesian Optimization Efficiency}
+\subsection{Bayesian optimization efficiency}
 
 While we were not able to obtain similar results for Bayesian optimization as we did for random search, we expose some of the difficulties in doing so.
 
-First any analysis depends of the exact setup of Bayesian optimization. A change of kernel or acquisition function changes the results. But the main problem is that because the process learns the structure of the hyper-parameter space, any analysis would need to work in a particular space.
+First any analysis depends of the exact setup of Bayesian optimization. A change of kernel or acquisition function changes the results. But the main problem is that, because the process learns the structure of the hyper-parameter space, any analysis would need to work in a particular space.
 
 None of those difficulties prevent us from measuring the empirical performance of Bayesian optimization, as we show in the next section.
 
@@ -701,11 +655,12 @@ In order to compare the performance of the different hyper-parameter optimizatio
 
 The dataset is composed of 60 000 images equally divided in 10 classes. The images are 32x32 RGB images. The training set contains 50 000 images, the test set 10 000.
 
-Since the goal of the experiment is not to beat the state-of-the-art on the dataset, the selected hyper-parameter space and the resulting models are small and simple. Each model is trained for a total of 10 minutes. 
+Since the goal of the experiment is not to beat the state-of-the-art on the dataset, the selected hyper-parameter space and the resulting models are small and simple. Each model is trained for a total of 10 minutes on a NVIDIA TITAN X card. 
 
-We then compare in which order the different methods selected the models. The methods are evaluated on how long it took them to select the best model, but also on the average performance of the models selected, i.e. if we rank the models by their performance, how close were each method from selecting the models in that order.
+We then compare in which order the different methods selected the models. The methods are evaluated on the time needed to select the best model, as well as the time needed to select a model in the top $\alpha \%$.
+%but also on the average performance of the selected models, i.e. if we rank the models by their performance, how close was each method from selecting the models in that order.
 
-However one run is not enough to conclude that Bayesian optimization on average is more efficient than random search. Due to the huge computing cost, we cannot do hundreds of runs with different seed and retrain each network every time. But if we do not retrain the network but change the seeds of the search policy, we can simulate hundreds of runs at a low cost. 
+However one run is not enough to conclude that Bayesian optimization on average is more efficient than random search. Due to the huge computing cost, we cannot do hundreds of runs with different seeds and retrain each network every time. But if we do not retrain the network but change the seeds of the search policy, we can simulate hundreds of runs at a low cost. 
 
 There are a total of $600!$ way to explore this space, but because we do not retrain the models, all the randomness in Bayesian optimization is in the choice of the first model, leaving us with only 600 possible paths through this space. We computed them all, then randomly selected 600 ordering for random search.
 
@@ -720,11 +675,11 @@ There are a total of $600!$ way to explore this space, but because we do not ret
 
 Before comparing the search methods, we look at the distribution of models performance in Figure~\ref{fig:cifar_hist}. A few models are really good, most are average and then there is a long trail of progressively worse models. It looks like a skew normal distribution. 
 
-We of course can't extrapolate that every hyper-parameter space will have a distribution like this, but we assume for now that this is the case for hyper-parameter spaces designed in practice.
+We cannot extrapolate that every hyper-parameter space will have a distribution like this, but we assume for now that this is the case for hyper-parameter spaces designed in practice.
 
 Since the distribution is not uniform, there is a difference between models in the top $5 \%$ of models and models that have a performance within $5 \%$ of the performance of the best model. In this case, there are 30 models in the top $5 \%$ of models (since there are 600 models), but only 6 are within $5 \%$ of the performance of the best model. In this case, the 30-th best model is within $18 \%$ of the best model.
 
-This distinction is important because it changes our evaluation of the methods. We are not simply interested in the average time to find a model in the top x $\%$ of models, but also in the average time to find a model within x $\%$ of the best model.
+This distinction is important because it changes our evaluation of the methods. We are not simply interested in the average time to find a model in the top $\alpha \%$ of models, but also in the average time to find a model within $\alpha \%$ of the best model.
 
 \subsubsection{Results}
 
@@ -742,7 +697,7 @@ This distinction is important because it changes our evaluation of the methods. 
 	\label{fig:cifar_loss}
 \end{figure}
 
-First, we look at the order in which models where selected during one run, shown in Figure~\ref{fig:cifar_loss}. The blue points represent the test loss of the models in the order the methods selected them, and the red line shows the minimum loss found at a given time. There is a clear trend present for Bayesian optimization where the combinations evaluated later have low performance, suggesting it did learn to predict correctly the performance of untested combination. In this run, it was also able to find the best model much earlier than random search. Random search looks as expected, models performance is uniformly distributed.
+First, we look at the order in which models where selected during one run, shown in Figure~\ref{fig:cifar_loss}. The blue points represent the test loss of the models in the order the methods selected them, and the red line shows the minimum loss found at a given time. There is a clear trend present for Bayesian optimization where the combinations evaluated later have low performance, suggesting it did learn to predict correctly the performance of untested combination. In this run, it was also able to find the best model much earlier than random search. Random search behaves as expected and models performance is uniformly distributed.
 
 \begin{table}[htb]
 	\centering
@@ -763,15 +718,15 @@ First, we look at the order in which models where selected during one run, shown
 		Top $10 \%$ & $10 \pm 10$ & $62$ & $7 \pm 7$ & $36$ \\
 		\hline
 	\end{tabular}
-	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within x $\%$ mean within x $\%$ of the performance of the best model.}
+	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within $\alpha \%$ mean within $\alpha \%$ of the performance of the best model.}
 	\label{table:search_average}
 \end{table}
 
 To confirm these trends, we look at the average number of draws taken by each method to reach different goals (Table~\ref{table:search_average}).
 
-Random search took on average 297 draws before finding the best model, which is within expected range of the theoretical value of 300 draws. If we rank the model by their performance, it took random search an average of 18 draws to find a model in the top $5\%$ and 87 to find a model in the top $1\%$.
+Random search needed on average 297 draws before finding the best model, which is within the expected range of the theoretical value of 300 draws. If we rank the model by their performance, random search needed an average of 18 draws to find a model in the top $5\%$ and 87 to find a model in the top $1\%$.
 
-In comparison, Bayesian optimization did a lot better on every goal. On average it took 87 draws to find the best model and only 17 to find a model in the top $1 \%$. In most cases the worst run of Bayesian optimization performed better than the average run of random search.
+In comparison, Bayesian optimization did a lot better on every goal. On average it needed 87 draws to find the best model and only 17 to find a model in the top $1 \%$. In most cases the worst run of Bayesian optimization performed better than the average run of random search.
 
 \begin{figure}[htb]
 	\centering
@@ -780,13 +735,13 @@ In comparison, Bayesian optimization did a lot better on every goal. On average 
 	\label{fig:bo_error_time}
 \end{figure}
 
-To confirm whether the Gaussian process is learning the structure of the hyper-parameter space, Figure~\ref{fig:bo_error_time} shows the predicted performance and the true performance, as well as the $95 \%$ prediction interval. As more models are used to refine the Gaussian process, the prediction interval shrinks, i.e. the Gaussian process becomes more confident in its prediction. Prediction for outliers, in this case models that don't learn, is terrible at the beginning and still the main source of error at the end.
+To confirm whether the Gaussian process is learning the structure of the hyper-parameter space, Figure~\ref{fig:bo_error_time} shows the predicted performance and the true performance, as well as the $95 \%$ prediction interval. As more models are used to refine the Gaussian process, the prediction interval shrinks, i.e. the Gaussian process becomes more confident in its prediction. Prediction for outliers, in this case models that do not learn, is highly inaccurate at the beginning and is still the main source of error at the end.
 
 \subsection{Conclusion}
 
-We designed an experiment to measure and compare the performance of random search and Bayesian optimization on a setting mimicking real life usage. Performance of random search matched closely theoretical results, showing the surprising efficiency of this method. Bayesian optimization outperformed random search on every metric, which justify its much higher implementation cost.
+We designed an experiment to measure and compare the performance of random search and Bayesian optimization on a setting mimicking real life usage. Performance of random search matched closely theoretical results, showing the surprising efficiency of this method. Bayesian optimization outperformed random search on every metric, which justifies its much higher implementation cost.
 
-Analysis of the models performance suggested it is normally distributed, but testing on other tasks with other hyper-parameter space is required. Likewise, while we expect Bayesian optimization to always outperforms random search, further confirmation is required.
+Analysis of the models performance suggested that it is normally distributed, but testing on other tasks with other hyper-parameter spaces is required. Likewise, while we expect Bayesian optimization to always outperform random search, further confirmation is required.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Combining Bayesian Optimization and Hyperband}
@@ -820,7 +775,7 @@ The second change is to normalize the values returned by the acquisition functio
 The proposed algorithm is as follows: the first group of configurations is chosen randomly and evaluated according to Hyperband. All subsequent selections are done by training a Gaussian process with a squared-exponential kernel on all evaluated models. The expected improvement is then computed on all untested combinations and normalized to make a probability distribution from which the next group of models is sampled.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Experiments and Results}
+\subsection{Experiments and results}
 
 We compare the three methods presented above: Bayesian optimization, Hyperband, and Hyperband using Bayesian optimization. The algorithms were implemented in Python using scikit-learn~\textcite{pedregosa2011sklearn} for the Gaussian processes and Keras~\textcite{chollet2015keras} as the deep learning framework.
 
@@ -874,7 +829,7 @@ While using the prediction at 27 minutes instead would avoid the overfitting, it
 This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Dataset and Problem Description}
+\subsection{Dataset and problem description}
 
 \begin{figure}[htb]
         \begin{subfigure}[b]{0.25\textwidth}
@@ -946,7 +901,7 @@ Finally, each slice is subject to a unique step of preprocessing: it is resized 
 Data augmentation is used and consists in generating 80 000 images per epoch. The augmentation is done by applying translations, shearing and rotations, zooming, and adding Gaussian noise.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Baseline Results}
+\subsection{Baseline results}
 
 \begin{figure}[htb]
 	\centering
@@ -986,7 +941,7 @@ Starting from a standard VGG architecture (\textcite{simonyan2014}), we modified
 We achieve a $14 \%$ error rate with most of the error focused on the chest. Examining the confusion matrix (Table~\ref{table:conf_matrix_baseline}), we note that the abdomen, pelvis and legs images have most of their errors located with anatomically adjacent regions. Further examinations of the misclassified images revealed they were for the most part located at the boundaries of their classes. These errors make sense as these boundaries are ill-defined and varies from one volume to the next. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Hyper-parameter Optimization}
+\subsection{Hyper-parameter optimization}
 
 \begin{figure}[htb]
 	\centering
@@ -1106,7 +1061,6 @@ The optimal boundary slices are the solutions to the following linear program:
     \end{array}
     \label{eq:optimal_boundary}
 \end{equation}
-
 The constraints specify that a region cannot start earlier than the end of the previous region.
 
 The Lagrangian is:
@@ -1114,18 +1068,15 @@ The Lagrangian is:
     \mathcal{L} \left( Z_i^m, Z_i^M, \lambda \right) = - \displaystyle\sum\limits_{i=1}^{N} \int_{Z_i^m}^{Z_i^M} P_i(z) dz
                                                         - \displaystyle\sum\limits_{i=1}^{N} \lambda_i \left( Z^m_{i+1} - Z_i^M \right)
 \end{equation}
-
 From the partial derivatives, we obtain:
 \begin{align*}
     \frac{\partial \mathcal{L}}{\partial Z_i^m} &= P_i \left( Z_i^m \right) - \lambda_{i-1} \\
     \frac{\partial \mathcal{L}}{\partial Z_i^M} &= - P_i \left( Z_i^M \right) + \lambda_{i}
 \end{align*}
-
 Setting the derivatives at zero, the optimal boundary slices must verify:
 \begin{equation}
     P_i \left( Z_i^M \right) = P_{i+1} \left( Z_{i+1}^m \right)
 \end{equation}
-
 This last constraint means that the boundary slices must be at the intersections between two successive regions. To clarify, a slice where the probability of belonging to the pelvis is equal to the probability of belonging to the abdomen is a potential boundary slice, but an intersection slice between pelvis and head is not.
 
 To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. An example is shown in Figure~\ref{fig:full_body}-d.
