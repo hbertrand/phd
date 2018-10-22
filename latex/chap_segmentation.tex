@@ -39,6 +39,11 @@ An Unsupervised Learning Model for Deformable Medical Image Registration
 
 We propose in this section to train a neural network to predict the deformation required for a shape model to match a specific segmentation target on a specific image. There are three components: learning a global transformation 
 
+\begin{figure}[htbp]
+	\includegraphics[width=\textwidth]{img_seg/deformation_network}
+    \caption{Intensity Layer. ``Parameters Prediction'' can be any model, in our case it is a 3-layers ConvNet.}
+    \label{fig:deform_network}
+\end{figure}
 
 \subsection{Learning a global transformation}
 
