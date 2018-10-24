@@ -747,7 +747,7 @@ Analysis of the models performance suggested that it is normally distributed, bu
 \section{Combining Bayesian Optimization and Hyperband}
 \label{sec:cap}
 
-This section describes and extends work that was presented at CAp 2017 (\textcite{bertrand2017CAp}).
+This section describes and extends the work presented at CAp 2017 (\textcite{bertrand2017CAp}). We propose a new method of hyper-parameter optimization that combines Bayesian optimization and Hyperband.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Hyperband}
@@ -755,11 +755,11 @@ This section describes and extends work that was presented at CAp 2017 (\textcit
 
 A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
 
-The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and so on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
+The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and continue on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
 
-But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, we do not know how to find that point and it changes between tasks. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the end.
+But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making the evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, we do not know how to find that point and it changes from one task to the other. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the end.
 
-The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation.
+The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. $R$ is typically specified in number of epochs or in minutes. At each evaluation, $1 / \eta$ models are kept while the rest are discarded. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Combining the methods}
@@ -768,24 +768,24 @@ Bayesian optimization and Hyperband being orthogonal approaches, it seems natura
 
 As a result, Hyperband does not improve the quality of its selection with time, while Bayesian optimization regularly loose time training bad models.
 
-Combining the methods fixes those problems. Model selection is done by Bayesian optimization as described in Section~\ref{sec:bo}, then Hyperband train them as described in Section~\ref{ssec:hyperband}. Two changes are required for Bayesian optimization, as it needs some way to distinguish between fully-trained models and partially trained models. To do that, the training time becomes an hyper-parameter, making the performance of each model at every minute a distinct point. The performance prediction is then done at the training time corresponding to Hyperband's first evaluation, to have only one prediction per model.
+Combining the methods fixes these problems. Model selection is done by Bayesian optimization as described in Section~\ref{sec:bo}, then Hyperband train them as described in Section~\ref{ssec:hyperband}. Two changes are required for Bayesian optimization, as it needs some way to distinguish between fully-trained models and partially trained models. To do that, the training time becomes an hyper-parameter, making the performance of each model at every minute a distinct point. The performance prediction is then done at the training time corresponding to Hyperband's first evaluation, to have only one prediction per model.
 
-The second change is to normalize the values returned by the acquisition function to make it a probability distribution. In the standard usage of Bayesian optimization, the chosen model is the argmax of the acquisition function. Choosing the top x models yield models that are very close as the acquisition function is smooth and gives similar values for nearby combinations. This strategy removes the property of Hyperband to explore many regions of space at the same time. Normalizing the values and drawing from this distribution keeps this property, while making the selection smarter over time as it changes to reflect the knowledge acquired from the trained models.
+The second change is to normalize the values returned by the acquisition function to make it a probability distribution. In the standard usage of Bayesian optimization, the chosen model is the argmax of the acquisition function. Choosing the top $\alpha$ models yields models that are very close as the acquisition function is smooth and gives similar values for nearby combinations. This strategy removes the property of Hyperband to explore many regions of space at the same time. Normalizing the values and drawing from this distribution keeps this property, while making the selection smarter over time as it changes to reflect the knowledge acquired from the trained models.
 
 The proposed algorithm is as follows: the first group of configurations is chosen randomly and evaluated according to Hyperband. All subsequent selections are done by training a Gaussian process with a squared-exponential kernel on all evaluated models. The expected improvement is then computed on all untested combinations and normalized to make a probability distribution from which the next group of models is sampled.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Experiments and results}
 
-We compare the three methods presented above: Bayesian optimization, Hyperband, and Hyperband using Bayesian optimization. The algorithms were implemented in Python using scikit-learn~\textcite{pedregosa2011sklearn} for the Gaussian processes and Keras~\textcite{chollet2015keras} as the deep learning framework.
+We compare the three methods presented above: Bayesian optimization, Hyperband, and Hyperband using Bayesian optimization. The algorithms were implemented in Python using scikit-learn (\textcite{pedregosa2011sklearn}) for the Gaussian processes and Keras (\textcite{chollet2015keras}) as the deep learning framework.
 
-Comparison was done on the CIFAR-10 dataset~\textcite{krizhevsky2009}, which is a classification task on $32 \times 32$ images. The image set was split 50\% for the training set used to train the neural networks, 30\% for the validation set used for the Bayesian model selection and the rest as test set used for the reported results below. 
+Comparison was done on the CIFAR-10 dataset (\textcite{krizhevsky2009}), which is a classification task on $32 \times 32$ images. The image set was split into $50\%$ for the training set used to train the neural networks, $30\%$ for the validation set used for the Bayesian model selection and the rest as test set used for the reported results below. 
 
-Each method is allocated a total budget $B = 4000$ minutes that it is free to allocate however it wants. The choice of having a budget in time means that models will not be trained in epoch as is the most common, but in minutes. This is a practical choice that allows to estimate accurately the total time that the search takes, though it has the effect of favouring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU. The training is done on two NVIDIA TITAN X.
+Each method is allocated a total budget $B = 4000$ minutes that it is free to allocate however it wants. The choice of having a budget in time means that models will not be trained in epochs as usual, but in minutes. This is a practical choice that allows estimating accurately the total time that the search takes, though it has the effect of favoring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU. The training is done on two NVIDIA TITAN X.
 
 The chosen architecture is a standard convolutional neural network with varying number of layers, number of filters and filter size per layer. Other hyper-parameters involved in the training method are: the learning rate, the batch size and the presence of data augmentation. In the end there is 6 hyper-parameters to tune for a total of 19 200 possible configurations.
 
-For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration and are trained for a maximum of 27 minutes, and $\eta = 3$ which means that $1/3$ of the models are kept at each evaluation. In the case of Bayesian optimization, each model was trained a full $30$ minutes but they are chosen sequentially.
+For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration and are trained for a maximum of 27 minutes, and $\eta = 3$ which means that $1/3$ of the models are kept at each evaluation. In the case of Bayesian optimization, each model was trained $30$ minutes but they are chosen sequentially.
 
 \begin{figure}[htb]
 	\begin{minipage}[b]{.49\linewidth}
@@ -800,8 +800,8 @@ For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration
 	\label{fig:combining_loss}
 \end{figure}
 
-The metric that matters when comparing methods is the loss of the best model found at a given time, and is illustrated in Fig.~\ref{fig:combining_loss} for the two individual methods and their combination (5 run each). 
-These results suggest that Bayesian optimization performs slightly worse than both other methods, and that Hyperband with Bayesian optimization finds a better model quicker than Hyperband. However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this metric. 
+The evaluation measure that matters when comparing methods is the loss of the best model found at a given time, and is illustrated in Figure~\ref{fig:combining_loss} for the two individual methods and their combination (5 runs each). 
+These results suggest that Bayesian optimization (in blue) performs slightly worse than both other methods, and that Hyperband with Bayesian optimization (in red) finds a better model quicker than Hyperband (in green). However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this evaluation measure. 
 
 It might be more informative to look at the running median of the loss of all models trained at a given time. Even if in the end only the best model matters, the running median gives us an idea of the quality of the models tried. Bayesian optimization performs notably worse than the other two methods. Hyperband and Hyperband + BO have similar performance, though Hyperband + BO seems slightly better.
 
@@ -810,23 +810,23 @@ It might be more informative to look at the running median of the loss of all mo
 
 Due to the part of chance in all three methods, five runs are not enough to draw definite conclusions on their performance. Ideally hundreds of runs would have been needed, and the computational cost of this endeavor was the main reason we did not pursue further this problem.
 
-While the seemingly low performance improvement of combining Hyperband and Bayesian optimization may be discouraging, there were two problems with our specific approach. 
+While the seemingly low performance improvement of combining Hyperband and Bayesian optimization may be discouraging, there are two problems with our specific approach. 
 
-As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. This was a terrible idea, as the resulting distribution was extremely close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. In effect, this is why our version of Hyperband + BO performed barely better than Hyperband alone. 
+As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. However the resulting distribution was very close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. This is why our version of Hyperband + BO performed barely better than Hyperband alone. 
 
-One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance has for effect of discouraging the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allow drawing many models simultaneously. 
+One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance has for effect of discouraging the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allows drawing many models simultaneously. 
 
-When drawing a large group of models at the same time like Hyperband requires, the cost of this process becomes important as the Gram matrix of the Gaussian process needs to be inverted many times. The incremental Cholesky decomposition presented in Section~\ref{sec:cholesky} could be used to make the process faster.
+When drawing a large group of models at the same time as required by Hyperband, the cost of this process becomes important as the Gram matrix of the Gaussian process needs to be inverted many times. The incremental Cholesky decomposition presented in Section~\ref{sec:cholesky} could be used to make the process faster.
 
-Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to be fully trained by the time of Hyperband's first evaluation (after 3 minutes of training) and start overfitting immediately after. This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, though with side effect described.
+Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to be fully trained by the time of Hyperband's first evaluation (after 3 minutes of training) and to start overfitting immediately after. This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, despite this side-effect.
 
-While using the prediction at 27 minutes instead would avoid the overfitting, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as they study models to extrapolate learning curves.
+While using the prediction at 27 minutes instead would avoid the overfitting, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as these authors study models to extrapolate learning curves.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
 \label{sec:isbi}
 
-This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}).
+This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}). It aims at applying the approaches described earlier in this chapter to a real application: the classification of MRI field-of-view.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dataset and problem description}
@@ -978,12 +978,12 @@ While many more hyper-parameters could have been considered, the ones we chose a
 	\label{table:hyper}
 \end{table}
 
-To explore this hyper-parameter space, we used Bayesian optimization, as described in Section~\ref{sec:bo}. We chose the Expected Improvement as our acquisition function, and we used the loss on the validation set as the value the Gaussian process must predict. Every network was trained for 30 epochs, and we trained a total of 300 models. The first model picked by the Bayesian optimization is usually chosen randomly, here it made sense to start from the baseline as it was already trained.
+To explore this hyper-parameter space, we used Bayesian optimization, as described in Section~\ref{sec:bo}.\footnote{While the previous section suggests Hyperband is a better method, this work was done before Hyperband.} We chose the Expected Improvement as our acquisition function, and we used the loss on the validation set as the value the Gaussian process must predict. Every network was trained for 30 epochs, and we trained a total of 300 models. The first model picked by the Bayesian optimization is usually chosen randomly, here it made sense to start from the baseline as it was already trained.
 
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/mrfov_bo_ei}
-	\caption{Performance of the models in the order they were trained. Each dot is a model. The red line represents the performance of the best model found until this point. The models with a loss of $2.5$ are models that couldn't be trained as they were too big.}
+	\caption{Performance of the models in the order they were trained. Each dot is a model. The red line represents the performance of the best model found until this point. The models with a loss of $2.5$ are models that could not be trained as they were too big.}
 	\label{fig:mrfov_bo_ei}
 \end{figure}
 
@@ -991,13 +991,13 @@ At the end, our optimization process yields a collection of models ranked by the
 
 Figure~\ref{fig:mrfov_bo_ei} shows the performance of the models in the order they were trained. The baseline is quickly improved upon and the best model is found after 33 iterations. Another model with similar performance is found after 55 iterations. Starting at iteration 90, most of the chosen models are too big to fit in memory and therefore unable to train. While the fact that no previously chosen models were too memory intensive but suddenly most chosen models are may seem surprising, this can be explained for two reasons.
 
-The first model of the process was our hand-crafted baseline, which had good performance. This likely allowed a good initialization of the Gaussian process, and the following models explored the area around the baseline. As models explored further and further than the baseline, eventually one was chosen that was too big to fit in memory. This argument is speculation that should be confirmed by repeating the Bayesian optimization many times with a different initialization every time. Lack of resources prevented us from exploring this point further.
+The first model of the process was our hand-crafted baseline, which had good performance. This likely allowed for a good initialization of the Gaussian process, and the following models explored the area around the baseline. As models explored further and further than the baseline, eventually one was chosen that was too big to fit in memory. This argument is speculation that should be confirmed by repeating the Bayesian optimization many times with a different initialization every time. Lack of resources prevented us from exploring this point further.
 
 The second argument explains why most models became impossible to train as soon as the first of those was chosen. This is due to how we handled models impossible to train for memory limitations. We chose to simply remove such models from the search space. However the acquisition function still gives a high priority to this region of space and a surrounding model is chosen that is also likely to be too big. Since we remove those models on subsequent iterations, the acquisition function never learns to not go there.
 
-An alternative way to handle un-trainable models would have been to choose an arbitrarily high loss for those models. This violate the smoothness assumption of the Gaussian process and would have affected strongly the prediction on nearby models, discouraging the acquisition function from choosing them. This would have also disqualified nearby models that fit in memory, which was our reason for not doing that in the first place. 
+An alternative way to handle un-trainable models would have been to choose an arbitrarily high loss for those models. This violates the smoothness assumption of the Gaussian process and would have affected strongly the prediction on nearby models, discouraging the acquisition function from choosing them. This would have also disqualified nearby models that fit in memory, which was our reason for not doing that in the first place. 
 
-It is not clear which strategy is better. Choosing a high loss sacrifices some valid models, but saves time by testing less un-trainable models. On the other hand, an un-trainable model fail immediately at model creation, so the gain in time is minor. 
+It is not clear which strategy is better. Choosing a high loss sacrifices some valid models, but saves time by testing less un-trainable models. On the other hand, an un-trainable model fails immediately at model creation, so the gain in time is minor. 
 But independently of the chosen strategy, the fact that some combinations lead to model too big to fit in memory highlights a flaw in the design of the hyper-parameters space and the resulting networks architectures. The un-trainable models are models with a low number of blocks but a high number of filters per layer. With one block and 64 filters per layer, the feature maps of the last convolutional layer are of size $64 \times 48 \times 48$, meaning the following fully-connected layer have $64 \times 48 \times 48 \times 4096 = 603,979,776$ weights. Since each block ends with a max-pooling layer, the number of weights quickly become manageable with additional blocks. 
 
 \begin{table}
@@ -1028,20 +1028,20 @@ But independently of the chosen strategy, the fact that some combinations lead t
 
 The best model found with Bayesian optimization has an error rate of $10 \%$, an improvement of $4 \%$ over the baseline. Looking at the confusion matrix in Table~\ref{table:conf_matrix_best}, there is a significant improvement in the classification of chest, going from $57 \%$ accuracy in the baseline to $93 \%$ accuracy. The other classes have similar accuracy as the baseline. Most of the errors are abdomen and legs slices located at the boundaries of the pelvis.
 
-Looking at the architectures of the two best models that have very similar error rates, the first one only deviates from the baseline by having two convolutional layers per block but only $32$ filters per convolutional layer and a higher batch size of $32$. The second model however is completely different. It has only 4 blocks with 3 convolutional layers per block, uses separable convolutions, with a smaller batch size of 4 and learning rate of $10^{-4}$.
+Looking at the architectures of the two best models that have very similar error rates, it can be observed that the first one only deviates from the baseline by having two convolutional layers per block but only $32$ filters per convolutional layer and a higher batch size of $32$. The second model however is completely different. It has only 4 blocks with 3 convolutional layers per block, uses separable convolutions, with a smaller batch size of 4 and learning rate of $10^{-4}$.
 
-The last important factor to consider is the total number of weights. The baseline model had $6,713,226$ weights, the best model had $5,468,778$, a $19 \%$ reduction. The second best model had $13,927,114$ weights due to using one less block than the other two models. Once again most of the weights are caused by the transition from the last convolutional layer to the first fully-connected layer. To improve on those results the first step would be to better design this transition, either by controlling the number of max-pooling layers or by replacing the fully-connected layers with convolutional layers, as is typical of modern convolutional neural networks. 
+The last important factor to consider is the total number of weights. The baseline model had $6,713,226$ weights, the best model had $5,468,778$, a $19 \%$ reduction. The second best model had $13,927,114$ weights due to using one less block than the other two models. Once again most of the weights are caused by the transition from the last convolutional layer to the first fully-connected layer. To improve these results the first step would be to better design this transition, either by controlling the number of max-pooling layers or by replacing the fully-connected layers with convolutional layers, as is typical of modern convolutional neural networks. 
 
 \subsection{From probabilities to a decision}
 
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/fullbody}
-	\caption{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and ground truth. (b) Raw model prediction. (c) After smoothing. (d) After selecting the best transitions.}
+	\caption{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and final prediction. (b) Raw model prediction. (c) After smoothing. (d) After selecting the best transitions.}
 	\label{fig:full_body}
 \end{figure}
 
-Even though we made the choice of processing the data at the slice level, the slices form volumes and we are interested in a decision at the volume level. The first question is: does the model classifies two successive slices similarly ? This is expected since successive slices are anatomically close and have a similar structure. If the model gives very different predictions, this could be a sign that it relies on noise patterns instead of the anatomical structures.
+Even though we made the choice of processing the data at the slice level, the slices form volumes and we are interested in a decision at the volume level. The first question is: does the model classifies two successive slices similarly? This is expected since successive slices are anatomically close and have a similar structure. If the model gives very different predictions, this could be a sign that it relies on noise patterns instead of the anatomical structures.
 
 To answer this question, we processed a full body volume by classifying each of its slices through our best model. 
 %For each slice, the predicted class is the one with a probability higher than $0.7$, and if no class meets this criterion, then we do not choose any. 
@@ -1049,9 +1049,11 @@ As we can see in Figure~\ref{fig:full_body}, the network is able to identify all
 
 But we are not interested in the mere probabilities, we want to take an actual decision. Therefore we need a decision scheme. A very simple one would be a threshold, say $0.7$, over which we consider the slice to be part of the class. However the predictions from the network are too noisy (see Figure~\ref{fig:full_body}-b), and this approach gives regions broken in multiple parts with messy boundaries.
 
-A first step is to smooth the probabilities curves with a Gaussian filter, as illustrated in Figure~\ref{fig:full_body}-c. This makes the predictions easier to read, and we can see that on this example the predictions are correct almost everywhere except for the chest. Additionally, the pelvis is preceded and followed by the abdomen, which is of course impossible.
+A first step is to smooth the probabilities curves with a Gaussian filter, as illustrated in Figure~\ref{fig:full_body}-c. This makes the predictions easier to read, and we can see on this example that the predictions are correct almost everywhere except for the chest. Additionally, the pelvis is preceded and followed by the abdomen, which is of course impossible.
 
-From this last observation, we note that our goal is to find contiguous anatomical regions, delimited by a starting slice $Z^m_i$ and an ending slice $Z^M_i$, where $i$ is the index of the region in anatomical order (legs - pelvis - abdomen - chest - head) and $Z$ is the slice number. Those boundaries must be such that $\forall i \in [1; N], Z^m_i < Z^M_i$. The network outputs the probability of a slice to belong to a region $P_i \left( Z \right)$.
+From this last observation, we note that our goal is to find contiguous anatomical regions, delimited by a starting slice $Z^m_i$ and an ending slice $Z^M_i$, where $i$ is the index of the region in anatomical order (legs - pelvis - abdomen - chest - head) and $Z$ is the slice number. Those boundaries must be such that 
+%$\forall i \in [1; N], Z^m_i < Z^M_i$ (the ending slice is after the starting slice) and 
+$\forall i \in [1; N], Z^m_{i+1} \ge Z^M_i$ (a region cannot start before the end of the previous region). The network outputs the probability of a slice to belong to a region $P_i \left( Z \right)$.
 
 The optimal boundary slices are the solutions to the following linear program:
 \begin{equation}
@@ -1061,7 +1063,6 @@ The optimal boundary slices are the solutions to the following linear program:
     \end{array}
     \label{eq:optimal_boundary}
 \end{equation}
-The constraints specify that a region cannot start earlier than the end of the previous region.
 
 The Lagrangian is:
 \begin{equation}
@@ -1081,7 +1082,7 @@ This last constraint means that the boundary slices must be at the intersections
 
 To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. An example is shown in Figure~\ref{fig:full_body}-d.
 
-This scheme is robust because of its properties: each region is at most one contiguous block (they can also be not present), the regions are always in anatomical order and it allows for many misclassified slices. 
+This scheme is robust because of its properties: each region is at most one contiguous block (it can also be not present), the regions are always in anatomical order and it allows for many misclassified slices. 
 
 \subsection{Conclusion}
 
@@ -1094,7 +1095,7 @@ Another problem encountered is how to deal with models that cannot be trained (b
 
 Regarding the final models, testing at the volume level has shown that the models are robust and can generalize. Still, the neural network was not enough to obtain smooth coherent predictions, and we presented a decision scheme to fix that.
 
-Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. The model could also be improved by using a cyclic learning rate, spatial dropout on the convolutional layers and replacing the fully-connected layers with convolutional layers. More care should be put in designing the hyper-parameter space, to limit the number of un-trainable models.
+Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. The model could also be improved by using a cyclic learning rate, spatial dropout on the convolutional layers and replacing the fully-connected layers with convolutional layers. More care should be put in designing the hyper-parameter space, to limit the number of un-trainable models. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \section{Conclusion}

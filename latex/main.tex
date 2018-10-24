@@ -137,6 +137,7 @@
 \title{Thesis}
 \author{Hadrien Bertrand}
 
+\addbibresource{publi.bib}
 \addbibresource{references.bib}
 
 % \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
@@ -169,6 +170,12 @@
 
 \defbibnote{clicknote}{Each header is a clickable link to the publication.}
 
-\printbibliography[prenote=clicknote,heading=bibintoc,title={Bibliography}]
+\defbibnote{publinote}{This thesis resulted in the following publications.}
+
+\printbibliography[prenote=publinote,heading=bibintoc,title={Publications},keyword=own]
+
+\makeatletter\@openrightfalse
+\printbibliography[prenote=clicknote,heading=bibintoc,title={Bibliography},notkeyword=own]
+\@openrighttrue\makeatother 
 
 \end{document}
