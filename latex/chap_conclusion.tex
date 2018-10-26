@@ -19,8 +19,10 @@ We designed an experiment on a small hyper-parameter space to observe the behavi
 We proposed a method combining the strengths of Hyperband and Bayesian optimization. Model selection is done by Bayesian optimization, and model training follows Hyperband scheme. Unfortunately due to how the selection of multiple models simultaneously was handled, the method did not perform significantly better than Hyperband alone.
 
 \paragraph*{A method to solve a classification problem of MRI field-of-view.}
+Using a dataset of MRI volumes from a multitude of protocols and machines, we developed a neural network able to classify each slice of the volumes into their anatomical regions (such as head or pelvis). We improved on this neural network by using Bayesian optimization to find a better architecture providing a non-negligible performance boost. Even though the classification was done at the slice level, we showed how it could be used for robust region localization through a decision scheme maximizing the likelihood of each region.
 
 \paragraph*{A new transfer learning method and its application to the segmentation of the kidney in 3D ultrasound images.}
+Working with a dataset of 3D ultrasound kidney images across two populations, we investigated transfer learning methods for the segmentation of the kidney from one population (healthy adults) to the other (sick children). This led us to develop a new transfer learning approach, based on adding layers to the pre-trained network to predict parameters for geometric and intensity transformation. 
 
 \paragraph*{A statistical shape model approach using deep learning.}
 
