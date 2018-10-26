@@ -5,4 +5,24 @@
 \label{chap:conclusion}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Summary of the contributions}
+
+The following contributions were presented in this thesis.
+
+\paragraph*{An incremental Cholesky decomposition to reduce the cost of Bayesian optimization.}
+Most of the computational cost of Bayesian optimization is in the inversion of the Gaussian process' Gram matrix. We exploited a particularity in the structure of this matrix specific to Bayesian optimization: each successive call adds new rows and columns while leaving the rest of the matrix unchanged. We have shown that this property stays true for the underlying Cholesky decomposition, and how to compute the new decomposition faster when the previous decomposition is available.
+
+\paragraph*{A comparison of the performance of random search and Bayesian optimization.} 
+We designed an experiment on a small hyper-parameter space to observe the behaviour of random search and Bayesian optimization over many runs. Bayesian optimization found better models than random search faster in the best, average and worst cases. We showed how the Gaussian process quickly became a good predictor of model performance and how the worst models were picked last. Random search behaved in accordance to the theoretical bounds we derived. Additionally we observed the distribution of models performance to be Gaussian.
+
+\paragraph*{A new hyper-parameter optimization method combining Hyperband and Bayesian optimization.}
+We proposed a method combining the strengths of Hyperband and Bayesian optimization. Model selection is done by Bayesian optimization, and model training follows Hyperband scheme. Unfortunately due to how the selection of multiple models simultaneously was handled, the method did not perform significantly better than Hyperband alone.
+
+\paragraph*{A method to solve a classification problem of MRI field-of-view.}
+
+\paragraph*{A new transfer learning method and its application to the segmentation of the kidney in 3D ultrasound images.}
+
+\paragraph*{A statistical shape model approach using deep learning.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Future Work}

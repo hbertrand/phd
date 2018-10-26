@@ -521,28 +521,28 @@ The second change is $x = t y$ where $t$ is a scalar:
   v^T K_{(k,k)} v
   \geq 0
 \end{equation*}
-The final change is $y = K_{(k,n)}^T v$:
+Since this is true for all $y \in \mathbb{R}^n$, this is true in particular when $y = K_{(k,n)}^T v$:
 \begin{equation*}
   t^2 v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v + 
   2 t v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
   v^T K_{(k,k)} v
   \geq 0
 \end{equation*}
-The determinant of this polynomial verifies:
-\begin{alignat*}{2}
-  &&4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2 &-
-  4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
+The discriminant of this polynomial is negative or null because the polynomial is always positive or null:
+\begin{align*}
+  4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2 -
+  &4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
   (v^T K_{(k,k)} v)
   \leq 0 \\
   \Leftrightarrow\mkern20mu
-  &&(v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2
+  0 \leq (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2
   &\leq 
   (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
   (v^T K_{(k,k)} v)
-\end{alignat*}
-But $v^T K_{(k,k)} v \geq 0$ since $ K_{(k,k)}$ is a Gram matrix (i.e. positive semi-definite), meaning by necessity $v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v \geq 0$ and $K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite.
+\end{align*}
+$v^T K_{(k,k)} v \geq 0$ since $ K_{(k,k)}$ is a Gram matrix (i.e. positive semi-definite), meaning by necessity $v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v \geq 0$ and $K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite.
 
-Therefore, $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite, it is positive definite as long as none of the $k$ new combinations are duplicates of the $n$ previous combinations and $D D^T$ is its Cholesky decomposition.
+Moreover, $K_{(k,k)} \geq K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$, allowing us to conclude that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite, and it is positive definite as long as none of the $k$ new combinations are duplicates of the $n$ previous combinations and $D D^T$ is its Cholesky decomposition.
 \begin{equation*}
   D = cho(K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T) = L_{(k)}
 \end{equation*}
