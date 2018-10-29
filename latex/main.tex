@@ -16,6 +16,7 @@
 \usepackage{array}
 \usepackage{setspace}
 \usepackage{bibentry}
+\usepackage{pdfpages}
 
 \usepackage{hyperref}
 
@@ -140,16 +141,20 @@
 \addbibresource{publi.bib}
 \addbibresource{references.bib}
 
-% \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
-\includeonly{chap_conclusion}
+\includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
+% \includeonly{chap_conclusion}
 
 \pagenumbering{roman}
 
 \begin{document}
-\maketitle
+\begin{titlepage}
+    \includepdf{cover/1ere}
+\end{titlepage}
 
 \dominitoc
 \tableofcontents
+
+\clearpage
 
 \pagenumbering{arabic}
 

@@ -1036,8 +1036,8 @@ The last important factor to consider is the total number of weights. The baseli
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=\linewidth]{img_hyperopt/fullbody}
-	\caption{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and final prediction. (b) Raw model prediction. (c) After smoothing. (d) After selecting the best transitions.}
+	\includegraphics[width=\linewidth]{img_hyperopt/fullbody_error}
+	\caption{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and ground truth. (b) Raw model prediction. (c) After smoothing. (d) Final prediction, after selecting the best transitions. Highlighted in red are the errors compared to the ground truth.}
 	\label{fig:full_body}
 \end{figure}
 
@@ -1080,7 +1080,7 @@ Setting the derivatives at zero, the optimal boundary slices must verify:
 \end{equation}
 This last constraint means that the boundary slices must be at the intersections between two successive regions. To clarify, a slice where the probability of belonging to the pelvis is equal to the probability of belonging to the abdomen is a potential boundary slice, but an intersection slice between pelvis and head is not.
 
-To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. An example is shown in Figure~\ref{fig:full_body}-d.
+To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. Following the example in Figure~\ref{fig:full_body}-d, the final prediction is wrong only at the extremities of the volume (our decision scheme forces to pick a class) and is in minor disagreement with the ground truth legs/pelvis boundary. The only error of consequence is the abdomen/chest boundary. Compared to the raw prediction which was wrong for the pelvis and chest, the improvement is clearly visible.
 
 This scheme is robust because of its properties: each region is at most one contiguous block (it can also be not present), the regions are always in anatomical order and it allows for many misclassified slices. 
 
