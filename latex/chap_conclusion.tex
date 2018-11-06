@@ -25,6 +25,7 @@ Using a dataset of MRI volumes from a multitude of protocols and machines, we de
 Working with a dataset of 3D ultrasound kidney images across two populations, we investigated transfer learning methods for the segmentation of the kidney from one population (healthy adults) to the other (sick children). This led us to develop a new transfer learning approach, based on adding layers to the pre-trained network to predict parameters for geometric and intensity transformation. 
 
 \paragraph*{A statistical shape model approach using deep learning.}
+<TODO after chapter is done> 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Future Work}
@@ -32,18 +33,19 @@ Working with a dataset of 3D ultrasound kidney images across two populations, we
 All of the contributions presented can be developed further as we discuss in this section.
 
 \paragraph*{An incremental Cholesky decomposition to reduce the cost of Bayesian optimization.}
-
+Even though we proved the complexity gain, we didn't integrate the incremental decomposition into a Bayesian optimization framework. This would be the next step, and would allow measuring the time gained in average. The testing could be done on the limited CIFAR-10 hyper-parameter space on which we compared random search and Bayesian optimization. As the gain in time becomes more important with the number of models tested, it might be interesting to increase the hyper-parameter space to a couple thousand models.
 
 \paragraph*{A comparison of the performance of random search and Bayesian optimization.} 
-
+Following the previous paragraph, extending the hyper-parameter space would yield insights into how Bayesian optimization behaves in larger spaces. This framework of testing could be used to observe the behaviour of other methods such as Hyperband. We observed models performance to be normally distributed, but the scope is limited to one hyper-parameter space on one task. To the best of our knowledge there is no theory on how to build good hyper-parameter spaces and understanding the relation between models, tasks and model performance would be of practical use to the use of hyper-parameter optimization methods.
 
 \paragraph*{A new hyper-parameter optimization method combining Hyperband and Bayesian optimization.}
-
+We have already described the flaws of our method: normalizing the acquisition function to transform it into a distribution from which we can draw multiple combinations resulted in a quasi-uniform distribution, completely negating the point of Bayesian optimization. Using a different strategy this combination method would perform better than either Hyperband or Bayesian optimization, as shown recently in~\textcite{falkner2018}.
 
 \paragraph*{A method to solve a classification problem of MRI field-of-view.}
-
+As the method presented gives robust results on our dataset, there is little need to improve it. It could be interesting however, to explore how to directly predict the boundaries of the regions using deep learning, instead of classifying each slice and using another method to obtain the regions. 
 
 \paragraph*{A new transfer learning method and its application to the segmentation of the kidney in 3D ultrasound images.}
-
+The limitation of the transfer learning method as presented is that it is highly specific to the kidney segmentation problem described. While the concept of adding specific transformation layers is general, it needs to be validated on other problems. 
 
 \paragraph*{A statistical shape model approach using deep learning.}
+<TODO after chapter is done> 

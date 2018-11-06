@@ -18,7 +18,13 @@
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Deformable shape models}
+\section{Template models}
+
+An approach to the segmentation of medical images is to use a previously acquired template and register it on the image to segment.
+
+% http://www.iro.umontreal.ca/~sherknie/articles/medImageRegAnOverview/brussel_bvz.pdf
+% https://rd.springer.com/chapter/10.1007/978-3-540-75759-7_25
+
 
 \subsection{Before deep learning}
 
@@ -30,12 +36,99 @@
 
 \subsection{Deforming the shape model}
 
-An Unsupervised Learning Model for Deformable Medical Image Registration
+An Unsupervised Learning Model for Deformable Medical Image Registration (voxelmorph)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Template Models for Kidney Segmentation in 3D Ultrasound}
 
+The problem addressed is the same as in Section~\ref{sec:kidney}: kidney capsule segmentation in 3D ultrasound data from potentially ill children. The difference is that we are not in a transfer learning setting and we have access to both adults and children images simultaneously.
+
+The contribution of this work is in the novel model-based segmentation method presented in Section~\ref{sec:deformable_dl}. We compare performance of the method to a baseline 3D U-Net and discuss their results in Section~\ref{sec:seg_result}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Dataset}
+
+\begin{figure}[htb]
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/30_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/32_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/33_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/37_post}
+        \end{subfigure}
+        
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/70_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/71_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/72_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/75_post}
+        \end{subfigure}
+        
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/280_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/282_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/286_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/288_post}
+        \end{subfigure}
+        \caption{Original images after pre-processing (left column) and augmented images (other three columns).}
+        \label{fig:data_aug}
+\end{figure}
+
+The dataset stays identical as in Section~\ref{ssec:data}, as well as the pre-processing. We have 503 healthy adults images and 64 children. The images have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. 
+
+\begin{table}[htb]
+	\centering
+	\begin{tabular}{|l|c|c|}
+	    \hline
+                        & Mean & Standard deviation \\
+        \hline
+         Gaussian noise & $0$ & $5$ \\
+         Translation & $0$ & $3$ \\
+         Rotation & $0$ & $0.05$ \\
+         Scaling & $1$ & $0.05$ \\
+        \hline
+    \end{tabular}
+	\caption{Data augmentation used for the kidney dataset. The parameters for each type of augmentation are drawn from a normal distribution with the mean and standard deviation specified.}
+	\label{table:data_aug}
+\end{table}
+
+Unlike previously, we use data augmentation. Due to the already high cost of training on this dataset, each image is augmented 10 times before training. The augmentation includes adding Gaussian noise, as well as translation, rotation and scaling of the image (and the segmentation). The range of each type of augmentation is shown in Table~\ref{table:data_aug}. Some augmented images are shown in Figure~\ref{fig:data_aug} alongside their original image.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Deformable shape models and deep learning}
+\label{sec:deformable_dl}
 
 We propose in this section to train a neural network to predict the deformation required for a shape model to match a segmentation target on a specific image. There are two components: predicting a geometric transformation and predicting the deformation field.
 
@@ -130,25 +223,73 @@ The prediction of the 9 required parameters is done by a convolutional layer wit
 
 The deformation field are predicted from a convolutional layer with 3 $3 \times 3 \times 3$ filters, one filter per dimension. Each field is then smoothed with a $3 \times 3 \times 3$ mean filter, before being resized to the shape model size with a tri-linear interpolation. This resizing step allows predicting deformation fields at a lower resolution than the shape model, saving time and parameters to learn.
 
-% While no constraints are applied to the fields in the end, we investigated adding an $L_2$ penalty term to the deformation fields $F$ in the loss function:
-% \begin{equation}
-%     P = \lambda \sum_x \left( F - I \right)(x)^2
-% \end{equation}
+We added an $L_2$ penalty term to the deformation fields $F$ in the loss function:
+\begin{equation}
+    P = \lambda \sum_x \left( F - I \right)(x)^2
+\end{equation}
+$I$ is the identity matrix and $\lambda$ is the strength of this term, chosen as $10^{-3}$. The goal of this penalty term is to constrain the size of the deformation fields.
 
-% This resulted in a drastic decrease in performance
+% \subsection{Distance map and loss}
 
-\subsection{Distance map and loss}
-
-- Distance map and appropriate loss
+% - Distance map and appropriate loss
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Application to the segmentation of the kidney in 3D-US}
+\section{Results and Discussion}
+\label{sec:seg_result}
 
-- dataset and preprocessing
+\begin{table}[htbp]
+	\centering
+\begin{tabular}{|l|c|c|c|c|}
+	\hline
+    Method & Dice Adults & Dice Children \\
+	\hline
+    3D U-Net & $\bm{0.89}$ & $\bm{0.82}$ \\
+    Deformation & $0.85$ & $0.75$ \\
+    Geometric transfo + Deformation & $0.88$ & $\bm{0.82}$ \\
+    Geometric transfo + Deformation + $L_2$ penalty & ??? & ??? \\
+    \hline
+\end{tabular}
+	\vspace{2mm}
+	\caption{Performance of the baseline and the shape model methods.}
+    \label{table:seg_results}
+\end{table}
 
-TODO:
-\begin{itemize}
-    \item Compare global transfo alone, defo field alone, global + field
-\end{itemize}
+For all the models the training is done jointly on adults and children with oversampling of the children to balance the populations. Each model was trained on only one seed due to the high cost of training (around five days per model). The performance of each model is reported in Table~\ref{table:seg_results}.
 
+The baseline for our comparison is the 3D U-Net (\textcite{cicek2016MICCAI}) described in Section~\ref{ssec:unet}. Its performance is therefore comparable to the one reported in Section~\ref{sec:kidney_res}, the only difference being the use of data augmentation. The performance goes from $0.81$ for the adults and $0.74$ for the children to $0.89$ and $0.82$, an important increase of $0.08$ for both populations. 
 
+Training a model predicting only deformation fields without the geometric transformation is not enough to beat the baseline, though it does show that the idea works. When adding the geometric transformation, the results become very close to the baseline. The geometric transformation is beneficial in particular for the children. This is likely due to the fact that the template model is an adult kidney, requiring the network to learn how to shrink it when segmenting children images. The geometric transformation provides an easy way to learn this shrinking with the three scaling parameters.
+
+[TODO penalty results]
+
+% \begin{figure}[htbp]
+%   \begin{subfigure}[b]{0.5\linewidth}
+%     \centering
+%     \includegraphics[width=0.95\linewidth]{img_seg/dice_hist_adults} 
+%   \end{subfigure}%% 
+%   \begin{subfigure}[b]{0.5\linewidth}
+%     \centering
+%     \includegraphics[width=0.95\linewidth]{img_seg/dice_hist_children} 
+%   \end{subfigure} 
+%   \caption{Histograms of Dice coefficient for the model with geometric transformation and deformation fields. Left: Dice coefficient on adults, right: Dice coefficient on children.}
+%   \label{fig:seg_hist}
+% \end{figure}
+
+\begin{figure}[htbp]
+    \centering
+	\includegraphics[width=\textwidth]{img_seg/unet_vs_deform}
+    \caption{Comparing 3D U-Net results and deformation fields results. From left to right: image, ground truth, U-Net segmentation, deformation fields segmentation.}
+    \label{fig:unet_vs_deform}
+\end{figure}
+
+Even though the performance of our method is similar to the baseline, using the template model results in segmentation anatomically correct. There are no patches of disconnected voxels classified as kidney or unlikely shapes. In Figure~\ref{fig:unet_vs_deform}, we selected three images from the test set to illustrate this. In the first one, the U-Net segmented a patch of pixel in the top left disconnected from the rest\footnote{As we show only a slice of a volume, the patch could be connected through the other slices, this is not the case here.}, while our method did not. The second image is difficult as the huge black spot can be mistaken for hydronephrosis. While both networks classified it as kidney, our method kept the elongated shape of the kidney outside of the black spot. In the third image, the U-Net segmented a patch of pixels almost disconnected from the main patch which would be very difficult to obtain by deforming a template model, as our method shows. 
+
+\begin{figure}[htbp]
+    \centering
+	\includegraphics[width=\textwidth]{img_seg/transfo_matrix}
+    \caption{Distributions of each parameter of the geometric transformation for the model without penalty. Red is for the adults, blue for the children.}
+    \label{fig:transfo_matrix}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
