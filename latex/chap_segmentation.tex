@@ -18,7 +18,21 @@
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Template Models}
+\section{Introduction}
+
+In medical imaging, the use of prior knowledge can greatly facilitate the segmentation of anatomical structures. This can be done by constraining the segmentation to be close to a pre-defined shape, i.e. a shape prior. Despite their previous popularity, shape prior are uncommon in modern deep learning, where the standard method is to produce the segmentation only from the image. 
+
+Template deformation produces the segmentation by deforming a binary template to match the image. Two components are needed: a template (the shape prior) and a regularization imposed on the deformation (the shape constraint). In this work we investigate how deep learning can be used for template deformation. The idea is to predict a global geometric transformation and a local geometric deformation and apply them to a template. 
+
+Using deep learning for this gives us two advantages: (1) because the network learns on a database of images and does not have to be retrained on new images, the segmentation is extremely fast; (2) the loss function only requires the ground-truth segmentation, there is no need to have the ground-truth of the geometric deformation.
+
+Section~\ref{sec:seg_biblio} briefly discusses template construction strategies and registration via deep learning. Our method is described in Section~\ref{sec:deformable_dl} and tested on the task of kidney segmentation in 3D ultrasound (Section~\ref{sec:seg_data}). The results are discussed in Section~\ref{sec:seg_result}.
+
+As this work was done at the very end of the PhD, the results are preliminary.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Template Deformation}
+\label{sec:seg_biblio}
 
 An approach to the segmentation of medical images is to use a previously acquired template and deform it to match the image to segment. Formally, given a template $\phi_0$ and an image $I$, we are interested in obtaining the segmentation mask $\phi$ by finding the deformation fields $\psi$ to be applied to the image:
 
@@ -53,95 +67,12 @@ An Unsupervised Learning Model for Deformable Medical Image Registration (voxelm
 Adversarial Similarity Network for Evaluating Image Alignment in Deep Learning Based Registration
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Kidney Segmentation in 3D Ultrasound}
+\section{Segmentation by Implicit Template Deformation}
 
-The problem addressed is the same as in Section~\ref{sec:kidney}: kidney capsule segmentation in 3D ultrasound data from potentially ill children. The difference is that we are not in a transfer learning setting and we have access to both adults and children images simultaneously.
-
-The contribution of this work is in the novel model-based segmentation method presented in Section~\ref{sec:deformable_dl}. We compare performance of the method to a baseline 3D U-Net and discuss their results in Section~\ref{sec:seg_result}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsection{Dataset}
-
-\begin{figure}[htb]
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/30_post}
-        \end{subfigure}%
-        \hspace{1px}
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/32_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/33_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/37_post}
-        \end{subfigure}
-        
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/70_post}
-        \end{subfigure}%
-        \hspace{1px}
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/71_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/72_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/75_post}
-        \end{subfigure}
-        
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/280_post}
-        \end{subfigure}%
-        \hspace{1px}
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/282_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/286_post}
-        \end{subfigure}%
-        \begin{subfigure}[b]{0.245\textwidth}
-                \centering
-                \includegraphics[width=\linewidth]{img_seg/288_post}
-        \end{subfigure}
-        \caption{Original images after pre-processing (left column) and augmented images (other three columns).}
-        \label{fig:data_aug}
-\end{figure}
-
-The dataset stays identical as in Section~\ref{ssec:data}, as well as the pre-processing. We have 503 healthy adults images and 64 children. The images have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. 
-
-\begin{table}[htb]
-	\centering
-	\begin{tabular}{|l|c|c|}
-	    \hline
-                        & Mean & Standard deviation \\
-        \hline
-         Gaussian noise & $0$ & $5$ \\
-         Translation & $0$ & $3$ \\
-         Rotation & $0$ & $0.05$ \\
-         Scaling & $1$ & $0.05$ \\
-        \hline
-    \end{tabular}
-	\caption{Data augmentation used for the kidney dataset. The parameters for each type of augmentation are drawn from a normal distribution with the mean and standard deviation specified.}
-	\label{table:data_aug}
-\end{table}
-
-Unlike previously, we use data augmentation. Due to the already high cost of training on this dataset, each image is augmented 10 times before training. The augmentation includes adding Gaussian noise, as well as translation, rotation and scaling of the image (and the segmentation). The range of each type of augmentation is shown in Table~\ref{table:data_aug}. Some augmented images are shown in Figure~\ref{fig:data_aug} alongside their original image.
+As this work places itself in the continuation of~\textcite{mory2012MICCAI}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Deformable shape models and deep learning}
+\section{Template Deformation via Deep Learning}
 \label{sec:deformable_dl}
 
 We propose in this section to train a neural network to predict the deformation required for a shape model to match a segmentation target on a specific image. There are two components: predicting a geometric transformation and predicting the deformation field.
@@ -255,6 +186,95 @@ $Id$ is the identity matrix and $\lambda$ is the strength of this term, chosen a
 % \subsection{Distance map and loss}
 
 % - Distance map and appropriate loss
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Kidney Segmentation in 3D Ultrasound}
+\label{sec:seg_data}
+
+The problem addressed is the same as in Section~\ref{sec:kidney}: kidney capsule segmentation in 3D ultrasound data from potentially ill children. The difference is that we are not in a transfer learning setting and we have access to both adults and children images simultaneously.
+
+The contribution of this work is in the novel model-based segmentation method presented in Section~\ref{sec:deformable_dl}. We compare performance of the method to a baseline 3D U-Net and discuss their results in Section~\ref{sec:seg_result}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{Dataset}
+
+\begin{figure}[htb]
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/30_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/32_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/33_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/37_post}
+        \end{subfigure}
+        
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/70_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/71_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/72_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/75_post}
+        \end{subfigure}
+        
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/280_post}
+        \end{subfigure}%
+        \hspace{1px}
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/282_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/286_post}
+        \end{subfigure}%
+        \begin{subfigure}[b]{0.245\textwidth}
+                \centering
+                \includegraphics[width=\linewidth]{img_seg/288_post}
+        \end{subfigure}
+        \caption{Original images after pre-processing (left column) and augmented images (other three columns).}
+        \label{fig:data_aug}
+\end{figure}
+
+The dataset stays identical as in Section~\ref{ssec:data}, as well as the pre-processing. We have 503 healthy adults images and 64 children. The images have been down-sampled to a resolution of $4 \times 4 \times 4$ mm$^3$, and centered in a $80 \times 80 \times 80$ voxels cube. 
+
+\begin{table}[htb]
+	\centering
+	\begin{tabular}{|l|c|c|}
+	    \hline
+                        & Mean & Standard deviation \\
+        \hline
+         Gaussian noise & $0$ & $5$ \\
+         Translation & $0$ & $3$ \\
+         Rotation & $0$ & $0.05$ \\
+         Scaling & $1$ & $0.05$ \\
+        \hline
+    \end{tabular}
+	\caption{Data augmentation used for the kidney dataset. The parameters for each type of augmentation are drawn from a normal distribution with the mean and standard deviation specified.}
+	\label{table:data_aug}
+\end{table}
+
+Unlike previously, we use data augmentation. Due to the already high cost of training on this dataset, each image is augmented 10 times before training. The augmentation includes adding Gaussian noise, as well as translation, rotation and scaling of the image (and the segmentation). The range of each type of augmentation is shown in Table~\ref{table:data_aug}. Some augmented images are shown in Figure~\ref{fig:data_aug} alongside their original image.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and Discussion}
