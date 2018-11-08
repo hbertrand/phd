@@ -18,37 +18,49 @@
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Template models}
+\section{Template Models}
 
-An approach to the segmentation of medical images is to use a previously acquired template and deform it to match the image to segment.
+An approach to the segmentation of medical images is to use a previously acquired template and deform it to match the image to segment. Formally, given a template $\phi_0$ and an image $I$, we are interested in obtaining the segmentation mask $\phi$ by finding the deformation fields $\psi$ to be applied to the image:
 
+\begin{equation}
+    \phi = \phi_0 \cdot \psi \left( I \right)
+\end{equation}
 
+\subsection{Constructing the template}
 
-% http://www.iro.umontreal.ca/~sherknie/articles/medImageRegAnOverview/brussel_bvz.pdf
-% https://rd.springer.com/chapter/10.1007/978-3-540-75759-7_25
+There are various strategies to construct the template. One can select the template as the image most similar to the one to segment in an existing database (\textcite{commowick2007MICCAI}) or build a mean template by using multiple images (\textcite{joshi2004}).
 
+Another strategy is to use multiple templates, which increases the robustness of the methods (\textcite{heckemann2006}) and then fuse the predictions (\textcite{warfield2004}). 
 
-\subsection{Before deep learning}
+A review of the existing methods of template construction can be found in~\textcite{cabezas2011}.
 
-\begin{itemize}
-    \item Link with registration ?
-\end{itemize}
+\subsection{Finding the deformation fields}
 
-\subsection{Building a shape model}
+Many methods such as \textit{Active Shape Models} (\textcite{cootes1995}), \textit{Active Appearance Models} (\textcite{cootes1998ECCV}) or \textit{Implicit Template Deformation} (\textcite{mory2012MICCAI}) have been proposed before. As this thesis focuses on deep learning, they are out-of-scope. We refer the interested reader to~\textcite{heimann2009} for a review of those methods.
 
-\subsection{Deforming the shape model}
+To the best of our knowledge, deep learning has not yet been used in the context of template models. It has however been used in the context of registration, i.e. the spatial alignment of two medical images.
+
+Convolutional neural networks have been used to regress the parameters of the registration transform from the input images (\textcite{miao2016},~\textcite{yang2016}).
+
+Another approach is to estimate a similarity measure from a neural network to be used in an iterative optimization strategy (\textcite{wu2013MICCAI},~\textcite{cheng2015},~\textcite{simonovosky2016MICCAI}).
+
+Recently, method using GANs (\textcite{goodfellow2014}) have been proposed.  
+
+[TODO describe GANs approaches]
 
 An Unsupervised Learning Model for Deformable Medical Image Registration (voxelmorph)
 
+Adversarial Similarity Network for Evaluating Image Alignment in Deep Learning Based Registration
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Template Models for Kidney Segmentation in 3D Ultrasound}
+\section{Kidney Segmentation in 3D Ultrasound}
 
 The problem addressed is the same as in Section~\ref{sec:kidney}: kidney capsule segmentation in 3D ultrasound data from potentially ill children. The difference is that we are not in a transfer learning setting and we have access to both adults and children images simultaneously.
 
 The contribution of this work is in the novel model-based segmentation method presented in Section~\ref{sec:deformable_dl}. We compare performance of the method to a baseline 3D U-Net and discuss their results in Section~\ref{sec:seg_result}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Dataset}
+%\subsection{Dataset}
 
 \begin{figure}[htb]
         \begin{subfigure}[b]{0.245\textwidth}
@@ -140,7 +152,13 @@ We propose in this section to train a neural network to predict the deformation 
     \label{fig:deform_network}
 \end{figure}
 
-Figure~\ref{fig:deform_network} presents the process. The network predict a geometric transformation and a deformation field from the image, which are applied to a fixed shape model. The deformed shape model then corresponds to the correct segmentation for the image. The shape model is simply the ground truth segmentation from an image not included in the training, validation or test sets.
+Figure~\ref{fig:deform_network} presents the process. The network predict a geometric transformation $G$ and a deformation field $\psi$ from the image, which are applied to a template $\phi_0$. The deformed template then corresponds to the correct segmentation for the image.
+
+\begin{equation}
+    \phi = \phi_0 \cdot G \cdot \ \psi
+\end{equation}
+
+In our case, the template is the ground truth segmentation from an image not included in the training, validation or test sets.
 
 The next sections explains how to predict and apply the transformation and the deformation field.
 
@@ -171,29 +189,32 @@ The scaling matrix $S$ is built from three more parameters:
 \end{equation*}
 
 Finally, we have one rotation matrix in each direction ($R_x$, $R_y$ and $R_z$) built from one parameter each:
-\begin{align*}
-    R_x &= 
+\begin{equation*}
+    R_x = 
     \begin{bmatrix}
         1 & 0 & 0 & 0 \\
         0 & \cos{r_x} & -\sin{r_x} & 0 \\
         0 & \sin{r_x} & \cos{r_x} & 0 \\ 
         0 & 0 & 0 & 1
-    \end{bmatrix} \\
-    R_y &= 
+    \end{bmatrix}
+\end{equation*}
+\begin{equation*}
+    R_y = 
     \begin{bmatrix}
         \cos{r_y} & 0 & - \sin{r_y} & 0 \\
         0 & 1 & 0 & 0 \\
         \sin{r_y} & 0 & \cos{r_y} & 0 \\ 
         0 & 0 & 0 & 1
-    \end{bmatrix} \\
-    R_z &= 
+    \end{bmatrix}
+    \mkern20mu
+    R_z = 
     \begin{bmatrix}
         \cos{r_z} & -\sin{r_z} & 0 & 0 \\
         \sin{r_z} & \cos{r_z} & 0 & 0 \\
         0 & 0 & 1 & 0 \\ 
         0 & 0 & 0 & 1
     \end{bmatrix}
-\end{align*}
+\end{equation*}
 
 We also need to center the image around zero before applying the rotations, which requires no parameters except knowing the center of the image:
 \begin{equation*}
@@ -225,11 +246,11 @@ The prediction of the 9 required parameters is done by a convolutional layer wit
 
 The deformation field are predicted from a convolutional layer with 3 $3 \times 3 \times 3$ filters, one filter per dimension. Each field is then smoothed with a $3 \times 3 \times 3$ mean filter, before being resized to the shape model size with a tri-linear interpolation. This resizing step allows predicting deformation fields at a lower resolution than the shape model, saving time and parameters to learn.
 
-We added an $L_2$ penalty term to the deformation fields $F$ in the loss function:
+We added an $L_2$ penalty term to the deformation fields $\psi$ in the loss function:
 \begin{equation}
-    P = \lambda \sum_x \left( F - I \right)(x)^2
+    P = \lambda \sum_x \left( \psi - Id \right)(x)^2
 \end{equation}
-$I$ is the identity matrix and $\lambda$ is the strength of this term, chosen as $10^{-3}$. The goal of this penalty term is to constrain the size of the deformation fields.
+$Id$ is the identity matrix and $\lambda$ is the strength of this term, chosen as $10^{-3}$. The goal of this penalty term is to constrain the size of the deformation fields.
 
 % \subsection{Distance map and loss}
 
@@ -293,5 +314,21 @@ Even though the performance of our method is similar to the baseline, using the 
     \label{fig:transfo_matrix}
 \end{figure}
 
+Since the geometric transformation provided an important boost in performance, we look at the distribution of each parameter predicted on the test set in Figure~\ref{fig:transfo_matrix}. 
+
+First we note that the distributions are almost identical for all parameters. Looking at the values for individual images reveals that the parameters are correlated, i.e. if a parameter falls on the lower side of the distribution for an image, the other parameters will also fall on the lower side of their distributions for the same image. This is likely due to using only one convolutional layer to predict the parameters, i.e. a lack of capacity.
+
+The second point of interest is that the distributions between adults and children are very different. The children tends to have lower parameter values and the adults are spread out over a bigger range. This makes sense for the scaling parameters: as the template is based on an adult's kidney, it is necessary to shrink it more to match the size of a children. However there are no reasons why this should be true for the translation and rotation. This is possibly a side-effect of the parameters being so correlated. If the network lacked capacity, it make sense to focus on the most important parameters, the scaling, and the other followed.
+
+Finally, looking at the actual value of the parameters, it seems that the network relies on a very specific transformation to work. Every parameter falls into a narrow range of values. For all images, the template is translated, rotated and scaled in roughly the same direction and amplitude. 
+
+The very low values of the scaling means the template model is heavily shrunk. As a result, the deformation fields must have very high values to match the target. The goal of the $L_2$ penalty is to change this by penalizing high values for the deformation fields.
+
+[TODO why are high values bad ?]
+
+[TODO geometric transfo distributions for penalty model]
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
+
+- multiple conv layers for geo pred
