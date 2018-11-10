@@ -1,11 +1,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                        SEGMENTATION                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Deformable Shape Models using Deep Learning}
+\chapter{Segmentation via Template Deformation using Deep Learning}
 \label{chap:seg}
 
 \begin{chapabstract}
- Coucou
+This chapter presents a new segmentation method that combines deep learning and template deformation.  Section~\ref{sec:seg_biblio} briefly discusses template construction strategies and registration via deep learning. The \textit{implicit template deformation} framework, which this work is based on, is introduced in Section~\ref{sec:implicit}. Our method is described in Section~\ref{sec:deformable_dl} and tested on the task of kidney segmentation in 3D ultrasound (Section~\ref{sec:seg_data}). The results are discussed in Section~\ref{sec:seg_result}.
 \end{chapabstract}
 
 \vspace{1cm}
@@ -22,11 +22,9 @@
 
 In medical imaging, the use of prior knowledge can greatly facilitate the segmentation of anatomical structures. This can be done by constraining the segmentation to be close to a pre-defined shape, i.e. a shape prior. Despite their previous popularity, shape prior are uncommon in modern deep learning, where the standard method is to produce the segmentation only from the image. 
 
-Template deformation produces the segmentation by deforming a binary template to match the image. Two components are needed: a template (the shape prior) and a regularization imposed on the deformation (the shape constraint). In this work we investigate how deep learning can be used for template deformation. The idea is to predict a global geometric transformation and a local geometric deformation and apply them to a template. 
+Template deformation produces the segmentation by deforming a binary template to match the image. Two components are needed: a template (the shape prior) and a regularization imposed on the deformation (the shape constraint). In this work we investigate how deep learning can be used for template deformation, and in particular how it can improve the \textit{implicit template deformation} framework. The core idea is to use the network to predict the transformation to be applied to the template.
 
-Using deep learning for this gives us two advantages: (1) because the network learns on a database of images and does not have to be retrained on new images, the segmentation is extremely fast; (2) the loss function only requires the ground-truth segmentation, there is no need to have the ground-truth of the geometric deformation.
-
-Section~\ref{sec:seg_biblio} briefly discusses template construction strategies and registration via deep learning. Our method is described in Section~\ref{sec:deformable_dl} and tested on the task of kidney segmentation in 3D ultrasound (Section~\ref{sec:seg_data}). The results are discussed in Section~\ref{sec:seg_result}.
+Using deep learning for this gives us two advantages: (1) because the network learns on a database of images and does not have to be retrained on new images, the segmentation is extremely fast; (2) the loss function only requires the ground-truth segmentation, there is no need to have the ground-truth of the geometric deformation or additional information.
 
 As this work was done at the very end of the PhD, the results are preliminary.
 
@@ -34,23 +32,23 @@ As this work was done at the very end of the PhD, the results are preliminary.
 \section{Template Deformation}
 \label{sec:seg_biblio}
 
-An approach to the segmentation of medical images is to use a previously acquired template and deform it to match the image to segment. Formally, given a template $\phi_0$ and an image $I$, we are interested in obtaining the segmentation mask $\phi$ by finding the deformation fields $\psi$ to be applied to the image:
+An approach to the segmentation of medical images is to use a previously acquired template and deform it to match the image to segment. Formally, given a template $\phi_0$ and an image $I$, we are interested in obtaining the segmentation mask $\phi$ by finding the transformation $\psi$ to be applied to the image:
 
 \begin{equation}
-    \phi = \phi_0 \cdot \psi \left( I \right)
+    \phi = \phi_0 \cdot \psi %\left( I \right)
 \end{equation}
 
 \subsection{Constructing the template}
 
-There are various strategies to construct the template. One can select the template as the image most similar to the one to segment in an existing database (\textcite{commowick2007MICCAI}) or build a mean template by using multiple images (\textcite{joshi2004}).
+The template can take different forms and there are various strategies to construct it. One can select the template as the image most similar to the one to segment in an existing database (\textcite{commowick2007MICCAI}) or build a mean template by using multiple images (\textcite{joshi2004}).
 
 Another strategy is to use multiple templates, which increases the robustness of the methods (\textcite{heckemann2006}) and then fuse the predictions (\textcite{warfield2004}). 
 
 A review of the existing methods of template construction can be found in~\textcite{cabezas2011}.
 
-\subsection{Finding the deformation fields}
+\subsection{Finding the transformation}
 
-Many methods such as \textit{Active Shape Models} (\textcite{cootes1995}), \textit{Active Appearance Models} (\textcite{cootes1998ECCV}) or \textit{Implicit Template Deformation} (\textcite{saddi2007}) have been proposed before. As this thesis focuses on deep learning, they are out-of-scope. We refer the interested reader to~\textcite{heimann2009} for a review of those methods.
+There is a vast literature of methods such as \textit{Active Shape Models} (\textcite{cootes1995}), \textit{Active Appearance Models} (\textcite{cootes1998ECCV}) or \textit{Implicit Template Deformation} (\textcite{saddi2007}) that have been proposed to find the deformation to apply to the template. These methods make no use of machine learning, and instead work by minimizing some kind of energy functional. As this thesis focuses on deep learning, they are out-of-scope. We refer the interested reader to~\textcite{heimann2009} for a review of those methods.
 
 To the best of our knowledge, deep learning has not yet been used in the context of template models. It has however been used in the context of registration, i.e. the spatial alignment of two medical images.
 
@@ -58,16 +56,11 @@ Convolutional neural networks have been used to regress the parameters of the re
 
 Another approach is to estimate a similarity measure from a neural network to be used in an iterative optimization strategy (\textcite{wu2013MICCAI},~\textcite{cheng2015},~\textcite{simonovosky2016MICCAI}).
 
-Recently, method using GANs (\textcite{goodfellow2014}) have been proposed.  
-
-[TODO describe GANs approaches]
-
-An Unsupervised Learning Model for Deformable Medical Image Registration (voxelmorph)
-
-Adversarial Similarity Network for Evaluating Image Alignment in Deep Learning Based Registration
+Recently, method using GANs (\textcite{goodfellow2014}) have been proposed.~\textcite{dalca2018MICCAI} developed a diffeomorphic integration layer coupled with a generative model that allows registration without the ground-truth deformation fields. In the approach of~\textcite{fan2018MICCAI}, a registration network predicts the deformation and a discrimination network evaluates the quality of the alignment. The networks are trained in the typical GAN fashion. A regularization term is added to the loss of the registration network to make the deformation field smoother.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Segmentation by Implicit Template Deformation}
+\label{sec:implicit}
 
 As this work places itself in the continuation of~\textcite{mory2012MICCAI} and~\textcite{prevost2013PHD}, we first present the \textit{Implicit Template Deformation} framework. 
 
@@ -78,6 +71,7 @@ The segmentation is defined as the zero level-set of an implicit function $\phi 
 Let $H$ denote the Heaviside function ($H(a) = 1$ if $a > 0$, $0$ otherwise), $r_{int}$ and $r_{ext}$ are image-based functions such that $r_{int}(x) - r_{ext}$ is negative if the pixel $x$ belong to the target object, positive otherwise. The implicit template deformation aims to find the transformation $\psi : \Omega \rightarrow \Omega$ that minimizes the energy:
 \begin{equation}
     \min_{\psi} \left\{ \int_{\Omega} H \left( \phi_0 \circ \psi \right) r_{int} + \int_{\Omega} \left( 1 - H \left( \phi_0 \circ \psi \right) \right) r_{ext} + \lambda \mathbf{R} \left( \psi \right) \right\}
+    \label{eq:implicit}
 \end{equation}
 $\mathbf{R} \left( \psi \right)$ is the regularization term that prevents the segmentation $\phi$ to deviate too much from the initial template $\phi_0$.
 
@@ -91,10 +85,22 @@ The local transformation is defined by a displacement field $u$ in the template 
 \begin{equation}
     u(x) = [K_{\sigma} * v](x) = \int K_{\sigma}(x-y)v(y)dy
 \end{equation}
-Finally, the regularization term $\mathbf{R} \left( \psi \right)$ is an $L_2$ norm to constrain $L$ towards the identity $Id$:
+Filtering the field with a Gaussian kernel enforces its regularity at a low computational cost.
+
+The idea of separating the transformation into a global and local component comes from~\textcite{yezzi2003}. The global transformation modifies the \textit{pose} of the prior while preserving its shape, which is changed by the local transformation.
+
+The advantage of this decomposition is to be able to define the regularization term $\mathbf{R} \left( \psi \right)$  independently from the pose. $\mathbf{R}$ then controls only the deviation of the shape of the segmentation $\phi$ from its prior $\phi_0$. It is chosen as an $L_2$ norm to constrain $L$ towards the identity $Id$ and the magnitude of the deformation:
 \begin{equation}
-    \mathbf{R} \left( L \right) = \frac{\lambda}{2} || L - Id ||^2_2
+    \mathbf{R} \left( \psi \right) = \mathbf{R} \left( L \right) = \frac{\lambda}{2} || L - Id ||^2_2
 \end{equation}
+
+\begin{figure}[htbp]
+	\includegraphics[width=\textwidth]{img_seg/implicit}
+    \caption{Implicit template deformation: the segmentation corresponds to the deformed initial template. (Source:~\textcite{mory2011})}
+    \label{fig:implicit}
+\end{figure}
+
+Once the deformation has been found through the minimization of Equation~\ref{eq:implicit}, the segmentation is obtained by applying it to the template, as illustrated in Figure~\ref{fig:implicit}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Template Deformation via Deep Learning}
@@ -202,13 +208,17 @@ The prediction of the 9 required parameters is done by a convolutional layer wit
 \subsection{Local deformation}
 \label{ssec:seg_local}
 
-The deformation field are predicted from a convolutional layer with 3 $3 \times 3 \times 3$ filters, one filter per dimension. Each field is then smoothed with a $3 \times 3 \times 3$ mean filter, before being resized to the shape model size with a tri-linear interpolation. This resizing step allows predicting deformation fields at a lower resolution than the shape model, saving time and parameters to learn.
-
-We added an $L_2$ penalty term to the deformation fields $\psi$ in the loss function:
+The deformation field $v$ are predicted from a convolutional layer with 3 $3 \times 3 \times 3$ filters, one filter per dimension. Each field is then smoothed with a $3 \times 3 \times 3$ mean filter, before being resized to the shape model size with a tri-linear interpolation. This resizing step allows predicting deformation fields at a lower resolution than the shape model, saving time and parameters to learn.
 \begin{equation}
-    P = \lambda \sum_x \left( L - Id \right)(x)^2
+    L = u(x) + Id = [K_{\sigma} * v](x) + Id
 \end{equation}
-$Id$ is the identity matrix and $\lambda$ is the strength of this term, chosen as $10^{-3}$. The goal of this penalty term is to constrain the size of the deformation fields.
+As in the implicit template deformation case, the Gaussian filtering is there to enforce the regularity of the deformation field.
+
+% We added an $L_2$ penalty term to the deformation fields $\psi$ in the loss function:
+% \begin{equation}
+%     P = \lambda \sum_x \left( L - Id \right)(x)^2
+% \end{equation}
+% $\lambda$ is the strength of this term, chosen as $10^{-3}$. The goal of this penalty term is to constrain the size of the deformation fields.
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Training and loss function}
@@ -216,16 +226,12 @@ $Id$ is the identity matrix and $\lambda$ is the strength of this term, chosen a
 
 Our segmentation method requires only the usual database of images and their ground-truth segmentation expressed as binary masks. For simplicity (and lack of time), the template is chosen as one of those segmentation. The corresponding image is then excluded from training and testing. 
 
-Applying the global and local transformation to the template can be done as a layer of the network that outputs the final segmentation. As such, the loss function $J$ is simply the Dice coefficient between the network's output $\hat{\phi}$ and the ground-truth segmentation $\phi$, plus the regularization term:
+Applying the global and local transformation to the template can be done as a layer of the network that outputs the final segmentation. As such, the loss function $J$ is simply the Dice coefficient between the network's output $\hat{\phi}$ and the ground-truth segmentation $\phi$:
 \begin{align}
-    J \left( \phi, \hat{\phi} \right) &= DICE \left( \phi, \hat{\phi} \right) + \frac{\lambda}{2} || L - Id ||^2_2 \\
-                                      &= DICE \left( \phi_0 \circ G \circ L, \hat{\phi} \right) + \frac{\lambda}{2} || L - Id ||^2_2
+    J \left( \phi, \hat{\phi} \right) = DICE \left( \phi, \hat{\phi} \right)% + \frac{\lambda}{2} || L - Id ||^2_2 \\
+                                      = DICE \left( \phi_0 \circ G \circ L, \hat{\phi} \right)% + \frac{\lambda}{2} || L - Id ||^2_2
 \end{align}
-The only free variables are $G$ and $L$, which are predicted by the network. Training the network as standard by backpropagation on a database of images will allow it to predict $G$ and $L$ for new images. 
-
-% \subsection{Distance map and loss}
-
-% - Distance map and appropriate loss
+The only free variables are $G$ and $L$, which are predicted by the network. Training the network as standard by backpropagation on a database of images allows it to predict $G$ and $L$ for new images. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Kidney Segmentation in 3D Ultrasound}
@@ -329,7 +335,7 @@ Unlike previously, we use data augmentation. Due to the already high cost of tra
     3D U-Net & $\bm{0.89}$ & $\bm{0.82}$ \\
     Deformation & $0.85$ & $0.75$ \\
     Geometric transfo + Deformation & $0.88$ & $\bm{0.82}$ \\
-    Geometric transfo + Deformation + $L_2$ penalty & ??? & ??? \\
+    %Geometric transfo + Deformation + $L_2$ penalty & ??? & ??? \\
     \hline
 \end{tabular}
 	\vspace{2mm}
@@ -343,7 +349,7 @@ The baseline for our comparison is the 3D U-Net (\textcite{cicek2016MICCAI}) des
 
 Training a model predicting only deformation fields without the geometric transformation is not enough to beat the baseline, though it does show that the idea works. When adding the geometric transformation, the results become very close to the baseline. The geometric transformation is beneficial in particular for the children. This is likely due to the fact that the template model is an adult kidney, requiring the network to learn how to shrink it when segmenting children images. The geometric transformation provides an easy way to learn this shrinking with the three scaling parameters.
 
-[TODO penalty results]
+%[TODO penalty results]
 
 % \begin{figure}[htbp]
 %   \begin{subfigure}[b]{0.5\linewidth}
@@ -382,13 +388,25 @@ The second point of interest is that the distributions between adults and childr
 
 Finally, looking at the actual value of the parameters, it seems that the network relies on a very specific transformation to work. Every parameter falls into a narrow range of values. For all images, the template is translated, rotated and scaled in roughly the same direction and amplitude. 
 
-The very low values of the scaling means the template model is heavily shrunk. As a result, the deformation fields must have very high values to match the target. The goal of the $L_2$ penalty is to change this by penalizing high values for the deformation fields.
+The very low values of the scaling means the template model is heavily shrunk. As a result, the deformation fields have very high values to match the target. %The goal of the $L_2$ penalty is to change this by penalizing high values for the deformation fields.
 
-[TODO why are high values bad ?]
+%[TODO why are high values bad ?]
 
-[TODO geometric transfo distributions for penalty model]
+%[TODO geometric transfo distributions for penalty model]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
 
-- multiple conv layers for geo pred
+In this chapter we presented a new segmentation method based on template deformation via deep learning. This method does not require ground-truth deformation fields, but only the standard ground-truth segmentation masks. As such, it can be applied to any medical imaging segmentation problem where the use of a template makes sense.
+
+As this work was done at the very end of the PhD, it is still incomplete, and there are some simple modifications that would likely improve the performance. 
+
+To avoid the very low values of the scaling parameters, the solution is to add an $L_2$ regularization term to the deformation field $L$:
+\begin{equation}
+    \mathbf{R} \left( L \right) = \frac{\lambda}{2} \sum_x \left( L - Id \right)(x)^2
+\end{equation}
+This would strongly reduce the magnitude of the deformation fields and force the scaling into a more sensible range. 
+
+To counter the strong correlation between the parameters of the global transformation, we should increase the capacity of the network by adding one or two convolutional layers just before the parameters prediction.
+
+The other aspect of this work that merits attention is the choice of template. We chose the simplest method of simply using one of the ground-truth segmentation as the template, but more complex methods are likely to yield better results. In particular the work of~\textcite{prevost2013PHD} learns the mean shape and possible variations and integrates it into the implicit template deformation framework, making it a natural fit with our approach.
