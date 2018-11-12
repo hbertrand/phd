@@ -25,12 +25,12 @@ bottom=30mm
 \usepackage{graphicx}
 \usepackage{lipsum}
 \usepackage{array}
-\usepackage{caption}
 \usepackage{multicol}
 \setlength{\columnseprule}{0pt}
 \setlength\columnsep{10pt}
-
+\usepackage[T1]{fontenc}
 \usepackage[french]{babel}
+\usepackage{caption}
 
 \label{form}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -41,13 +41,21 @@ bottom=30mm
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newcommand{\logoEd}{STIC}																		%% Logo de l'école doctorale. Indiquer le sigle / Doctoral school logo. Indicate the acronym : 2MIB; AAIF; ABIES; BIOSIGNE; CBMS; EDMH; EDOM; EDPIF; EDSP; EOBE; INTERFACES; ITFA; PHENIICS; SDSV; SDV; SHS; SMEMAG; SSMMH; STIC
-\newcommand{\PhDTitleFR}{titre (en français)}													%% Titre de la thèse en français / Thesis title in french
-\newcommand{\keywordsFR}{3 à 6 mots clés}														%% Mots clés en français, séprarés par des , / Keywords in french, separated by ,
+\newcommand{\PhDTitleFR}{Optimisation d'hyper-paramètres en apprentissage profond et apprentissage par transfert - Applications en imagerie médicale}													%% Titre de la thèse en français / Thesis title in french
+\newcommand{\keywordsFR}{Apprentissage profond, imagerie médicale, apprentissage par transfert, déformation de modèles, segmentation}														%% Mots clés en français, séprarés par des , / Keywords in french, separated by ,
 \newcommand{\abstractFR}{\lipsum[1-3]}															%% Résumé en français / abstract in french
 
-\newcommand{\PhDTitleEN}{titre (en anglais)}													%% Titre de la thèse en anglais / Thesis title in english
-\newcommand{\keywordsEN}{3 à 6 mots clés}														%% Mots clés en anglais, séprarés par des , / Keywords in english, separated by ,
-\newcommand{\abstractEN}{\lipsum[1-3]}															%% Résumé en anglais / abstract in english
+\newcommand{\PhDTitleEN}{Hyper-parameter optimization in deep learning and transfer learning - Applications to medical imaging}													%% Titre de la thèse en anglais / Thesis title in english
+\newcommand{\keywordsEN}{Deep learning, medical imaging, transfer learning, template deformation, segmentation}														%% Mots clés en anglais, séprarés par des , / Keywords in english, separated by ,
+\newcommand{\abstractEN}{
+In the last few years, deep learning has changed irrevocably the field of computer vision. Faster, giving better results, and requiring a lower degree of expertise to use than traditional computer vision methods, deep learning has become ubiquitous in every imaging applications. This includes medical imaging applications. 
+
+At the beginning of this thesis, tools to use deep learning were lacking, and so was our understanding of how to build efficient neural networks for specific tasks. Thus this thesis first focused on the topic of hyper-parameter optimization for deep neural networks, i.e. methods for automatically finding efficient neural networks on specific tasks. The thesis includes a comparison of different methods, a performance improvement of one of those methods, Bayesian optimization, and the proposal of a new method of hyper-parameter optimization by combining two existing methods: Bayesian optimization and Hyperband.
+
+From there, we used those methods for medical imaging applications such as the classification of field-of-view in MRI or the segmentation of the kidney in 3D ultrasound images across two populations of patients. This last task required the development of a new transfer learning method based on the modification of the source network by adding new geometric and intensity transformation layers.
+
+Finally this thesis loops back to older computer vision methods, and we propose a new segmentation algorithm combining template deformation and deep learning. We show how to use a neural network to predict global and local transformations without requiring the ground-truth of those transformations. The method is validated on the task of kidney segmentation in 3D US. 
+}															%% Résumé en anglais / abstract in english
 
 \label{layout}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

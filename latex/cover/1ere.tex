@@ -26,11 +26,12 @@
 \usepackage{lipsum}
 \usepackage{hyperref}
 \usepackage{array}
-\usepackage{caption}
 \usepackage{multicol}
 \setlength{\columnseprule}{0pt}
 \setlength\columnsep{10pt}
+\usepackage[T1]{fontenc}
 \usepackage[french]{babel}
+\usepackage{caption}
 
 
 \label{form}
@@ -52,7 +53,7 @@
 \newcommand{\PhDspeciality}{Traitement du signal et des images} 										%% Spécialité de doctorat / Speciality 
 \newcommand{\PhDworkingplace}{Télécom ParisTech} 										%% Établissement de préparation / PhD working place : l'Université Paris-Sud, l'Université de Versailles-Saint-Quentin-en-Yvelines, l'Université d'Evry-Val-d'Essonne, l'Institut des sciences et industries du vivant et de l'environnement (AgroParisTech), CentraleSupélec,l'Ecole normale supérieure de Cachan, l'Ecole Polytechnique, l'Ecole nationale supérieure de techniques avancées, l'Ecole nationale de la statistique et de l’administration économique, HEC Paris, l'Institut d'optique théorique et appliquée, Télécom ParisTech, Télécom SudParis   
 \newcommand{\defenseplace}{Paris} 											%% Ville de soutenance / Place of defense
-\newcommand{\defensedate}{Date} 															%% Date de soutenance / Date of defense
+\newcommand{\defensedate}{15/01/2019} 															%% Date de soutenance / Date of defense
 
 %%% Établissement / Institution
 %%% Si la thèse a été produite dans le cadre d'une co-tutelle, commenter la partie "Pas de co-tutelle" et décommenter la partie "Co-tutelle" / If the thesis has been prepared in guardianship, comment the part "Pas de co-tutelle" and uncomment the part "Co-tutelle"
@@ -92,38 +93,43 @@
 
 %%% Membre n°2 (Rapporteur) / Member n°2 (President)
 \newcommand{\jurynameB}{Caroline Petitjean}
-\newcommand{\juryadressB}{Statut, Établissement (Unité de recherche)}
-\newcommand{\juryroleB}{Rapporteur}
+\newcommand{\juryadressB}{Professeur associé, Université de Rouen}
+\newcommand{\juryroleB}{Rapporteuse}
 
 %%% Membre n°3 (Rapporteur) / Member n°3 (President)
-\newcommand{\jurynameC}{Hervé Delingette}
-\newcommand{\juryadressC}{Directeur de recherche, Établissement (Unité de recherche)}
-\newcommand{\juryroleC}{Rapporteur}
+\newcommand{\jurynameA}{Hervé Delingette}
+\newcommand{\juryadressA}{Directeur de recherche, INRIA Sophia-Antipolis}
+\newcommand{\juryroleA}{Rapporteur}
 
 %%% Membre n°4 (Examinateur) / Member n°4 (President)
-\newcommand{\jurynameD}{Prénom Nom}
-\newcommand{\juryadressD}{Statut, Établissement (Unité de recherche)}
+\newcommand{\jurynameC}{Pierrick Coupé}
+\newcommand{\juryadressC}{Chargé de Recherche, Université de Bordeaux}
+\newcommand{\juryroleC}{Examinateur}
+
+%%% Membre n°4 (Examinateur) / Member n°4 (President)
+\newcommand{\jurynameD}{Jamal Atif}
+\newcommand{\juryadressD}{Professeur, Université Paris-Dauphine}
 \newcommand{\juryroleD}{Examinateur}
 
 %%% Membre n°5 (Directeur de thèse) / Member n°5 (Thesis supervisor)
-\newcommand{\jurynameE}{Prénom Nom}
-\newcommand{\juryadressE}{Statut, Établissement (Unité de recherche)}
-\newcommand{\juryroleE}{Directeur de thèse}
+\newcommand{\jurynameE}{Isabelle Bloch}
+\newcommand{\juryadressE}{Professeur, Télécom ParisTech}
+\newcommand{\juryroleE}{Directrice de thèse}
 
 %%% Membre n°6 (Co-directeur de thèse) / Member n°6 (Thesis co-supervisor)
-\newcommand{\jurynameF}{Prénom Nom}
-\newcommand{\juryadressF}{Statut, Établissement (Unité de recherche)}
-\newcommand{\juryroleF}{Co-directeur de thèse}
+\newcommand{\jurynameF}{Roberto Ardon}
+\newcommand{\juryadressF}{Chercheur, Philips Research}
+\newcommand{\juryroleF}{Co-encadrant de thèse}
+
+%%% Membre n°6 (Co-directeur de thèse) / Member n°6 (Thesis co-supervisor)
+\newcommand{\jurynameG}{Matthieu Perrot}
+\newcommand{\juryadressG}{Chercheur, Philips Research}
+\newcommand{\juryroleG}{Co-encadrant de thèse}
 
 %%% Membre n°7 (Invité) / Member n°7 (Guest)
-\newcommand{\jurynameG}{Prénom Nom}
-\newcommand{\juryadressG}{Statut, Établissement (Unité de recherche)}
-\newcommand{\juryroleG}{Invité}
-
-%%% Membre n°8 (Invité) / Member n°8 (Guest)
-\newcommand{\jurynameH}{Prénom Nom}
-\newcommand{\juryadressH}{Statut, Établissement (Unité de recherche)}
-\newcommand{\juryroleH}{Invité}
+% \newcommand{\jurynameG}{Prénom Nom}
+% \newcommand{\juryadressG}{Statut, Établissement (Unité de recherche)}
+% \newcommand{\juryroleG}{Invité}
 
 %% Il est possible d'ajouter des membres supplémentaires selon le même modèle / More jury members can be added according to the same model
 
@@ -226,7 +232,7 @@
 		\jurynameE  \\ \juryadressE & \juryroleE \\[5pt]
 		\jurynameF  \\ \juryadressF & \juryroleF \\[5pt]
 		\jurynameG  \\ \juryadressG & \juryroleG \\[5pt]
-		\jurynameH  \\ \juryadressH & \juryroleH \\[5pt]
+		%\jurynameH  \\ \juryadressH & \juryroleH \\[5pt]
 	\end{tabular} 
 	\end{flushleft}   
 	%\end{center}

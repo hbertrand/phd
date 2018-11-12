@@ -17,6 +17,7 @@
 \usepackage{setspace}
 \usepackage{bibentry}
 \usepackage{pdfpages}
+\usepackage{fancyhdr}
 
 \usepackage{hyperref}
 
@@ -142,7 +143,7 @@
 \addbibresource{references.bib}
 
 % \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
-\includeonly{chap_segmentation, chap_conclusion}
+\includeonly{chap_introduction}
 
 \pagenumbering{roman}
 
@@ -150,6 +151,10 @@
 \begin{titlepage}
     \includepdf{cover/1ere}
 \end{titlepage}
+
+\clearpage
+
+\includepdf{cover/4eme}
 
 \dominitoc
 {   
@@ -160,6 +165,15 @@
 \clearpage
 
 \pagenumbering{arabic}
+
+% fancy style
+\pagestyle{fancy}
+\fancyhf{}
+%\fancyhead[R]{\thepage}
+\fancyhead[LE]{\fontsize{10}{12} \selectfont \slshape \rightmark}
+\fancyhead[RO]{\fontsize{10}{12} \selectfont \slshape \leftmark}
+\fancyhead[LO,RE]{\thepage}
+\setlength{\headheight}{15pt}
 
 \include{chap_introduction}
 

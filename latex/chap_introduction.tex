@@ -20,8 +20,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Context}
 
-This thesis is at the cross-road of medical image analysis and deep learning, and explores how the recent advances in deep learning can be leveraged to improve the performance on tasks where traditional computer vision methods were insufficient. 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Medical Imaging}
 
@@ -33,46 +31,40 @@ While computer vision methods developed for natural images can be reused, the sp
 
 While these may seem to make the problem simpler at first glance, challenges in medical image analysis come in two categories. The first challenge is variability, either intra-subject (changes in the body with time, or during image acquisition as the patient breathes and moves) or inter-subject (in the shape, size and location of bones and organs). Variability also comes from external sources: patterns of noise specific to a machine, image resolution and contrasts depending on the image protocol, field-of-view depending on how the clinicians handle the probe ... 
 
-The second challenge comes from the difficulty of acquiring data and therefore the low amount of data available. This difficulty is caused by the time and expertise required for the acquisition itself, the sensitivity of the data that adds ethical, administrative and bureaucratic overhead, and sometimes the rarity of a disease.\footnote{Initiatives are underway to create big and accessible medical images databases. (See for examples the \href{https://www.nlm.nih.gov/NIHbmic/nih_data_sharing_repositories.html}{NIH Data Sharing Repositories} or the \href{https://www.kaggle.com/datasets?tagids=4202}{Kaggle Healthcare datasets})}
+The second challenge comes from the difficulty of acquiring data and therefore the low amount of data available. This difficulty comes in many forms: the acquisition of images requires time and expertise, the sensitivity of the data adds ethical, administrative and bureaucratic overhead (the recent GDPR laws come to mind), and sometimes the rarity of a disease makes it simply impossible to acquire large amounts of data.\footnote{Initiatives are underway to create big and accessible medical images databases. See for examples the \href{https://www.nlm.nih.gov/NIHbmic/nih_data_sharing_repositories.html}{NIH Data Sharing Repositories} or the \href{https://www.kaggle.com/datasets?tagids=4202}{Kaggle Healthcare datasets}.} 
+
+And acquiring the data is not enough! The data needs to be annotated, a task that often needs to be done by a clinical expert. Image segmentation is an important problem, but the manual creation of the necessary ground-truth segmentations is a time consuming activity that puts a strong limit on the size of medical images databases. A rough estimation: at an average of 5 minutes per image (an optimistic time in many cases, in particular for 3D images), creating the ground-truth segmentations of a 100 images requires slightly over 8 hours of clinician time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Deep Learning}
 
-These last few years, it has been impossible to talk about medical image analysis without talking about deep learning. The inescapable transformation brought with deep learning was made possible with the advent of cheap memory storage and computing power. %It is not, however, the first time artificial neural networks where applied to medical imaging problems.  
+These last few years, it has been impossible to talk about medical image analysis without talking about deep learning. The inescapable transformation brought with deep learning was made possible with the advent of cheap memory storage and computing power. At first glance, deep learning gives much better results than traditional computer vision algorithms, while often being faster. From its first big success in the 2012 ImageNet competition won by~\textcite{krizhevsky2012NIPS}, deep learning has had a string of successes that now make it ubiquitous in computer vision, including medical imaging.
 
-This change brought with it its own set of challenges. The huge amount of resources invested into the field results in a deluge of publications where it is difficult to keep up-to-date and separate the noise from the actual progress.
+This change brought with it its own set of challenges. The huge amount of resources invested into the field results in a deluge of publications where it is difficult to keep up-to-date and separate the noise from the actual progress. New algorithms and technologies go from research to production to widely used so fast, the field has completely changed in the duration of this thesis.
 
 To give some perspectives on the progress, at the start of this thesis in early 2016: 
 \begin{itemize}
     \item Tensorflow (\textcite{tensorflow2015}) was just released and a nightmare to install - now it works everywhere from desktop to smartphone and has been cited in over 5000 papers.
     \item The original GAN paper by Goodfellow \textit{et al} was published mid 2014 (\textcite{goodfellow2014}). Early 2016, GANs had the reputation of being incredibly difficult to train and unusable outside of toy datasets. Three years and 5000 citations later, GANs have been applied to a wide range of domains, including medical imaging.
-    \item The omnipresent U-Net architecture had just made its debut a few months earlier at MICCAI 2015 (\textcite{ronneberger2015MICCAI}).
+    \item The now omnipresent U-Net architecture had just made its debut a few months earlier at MICCAI 2015 (\textcite{ronneberger2015MICCAI}).
 \end{itemize}
 
-In the context of medical imaging, deep learning also brings technical challenges. Two of the most common criticisms are the lack of interpretability of neural networks and the lack of robustness. They are barriers to the adoption of deep learning in clinical use and resolving those issues would open the doors to new tasks such as diagnosis or surgical intervention. 
+%In the context of medical imaging, deep learning also brings technical challenges. Two of the most common criticisms are the lack of interpretability of neural networks and the lack of robustness. They are barriers to the adoption of deep learning in clinical use and resolving those issues would open the doors to new tasks such as diagnosis or surgical intervention. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Contributions}
+\section{Contributions and Outline}
 
-During this thesis we explored a range of problems, from theoretical to applied. This work contains the following contributions (listed in the order they appear in the thesis):
+This thesis is at the cross-road of medical image analysis and deep learning. It first started as an exploration of how to use deep learning on medical imaging problems. The first roadblock encountered was the construction of neural networks specific to a problem. Their was a lack of understanding of the effect of each component of the network on the task to be solved (this is still the case). How many convolutional layers are needed to solve this task ? Is it better to have more filters or bigger filters ? What is the best batch size ? The lack of answers to those questions led us to the topic of hyper-parameter optimization; if we cannot lean on theoretical foundations to build our models, then at least we can automate the search of the best model for a given task and have an empirical answer.
+
+Once equipped with hyper-parameter optimization tools, we turned to applications, first the classification of field-of-view in MR images, then the segmentation of the kidney in 3D ultrasound. This last problem was examined in a transfer learning setting and led us to the development of a new transfer learning method. 
+
+In the final part of this thesis we returned to older computer vision methods, notably template deformation methods, and proposed a new method to combine them with deep learning.
+
+This thesis is structured in three parts, each starting with a review of the relevant literature. 
+
 \begin{itemize}
-    \item A performance improvement of Bayesian optimization by using an incremental Cholesky decomposition. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:cholesky}.
-    \item A theoretical bound on the performance of random search. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:compare}.
-    \item A new hyper-parameter optimization method combining Hyperband and Bayesian optimization. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:cap}. Published as~\textcite{bertrand2017CAp}.
-    \item A method to solve a classification problem of MRI field-of-view. Chapter~\ref{chap:hyperopt}, Section~\ref{sec:isbi}. Published as~\textcite{bertrand2017ISBI}.
-    \item A new transfer learning method and its application to the segmentation of the kidney in 3D ultrasound images. Chapter~\ref{chap:transfer}. Filled as a patent, under review.
-    \item A statistical shape model approach using deep learning. Chapter~\ref{chap:seg}.
+    \item \textbf{Chapter~\ref{chap:hyperopt}} discusses the topic of hyper-parameter optimization in the context of deep learning. We focus on three methods: random search, Bayesian optimization and Hyperband. The chapter includes (1) a performance improvement of Bayesian optimization by using an incremental Cholesky decomposition; (2) a theoretical bound on the performance of random search and a comparison of random search and Bayesian optimization in a practical setting; (3) a new hyper-parameter optimization method combining Hyperband and Bayesian optimization, published as~\textcite{bertrand2017CAp}; (4) an application of Bayesian optimization to solve a classification problem of MRI field-of-view, published as~\textcite{bertrand2017ISBI}.
+    \item \textbf{Chapter~\ref{chap:transfer}} introduces a new transfer learning method in order to solve the task of segmenting the kidney in 3D ultrasound across two populations: healthy adults and sick children. The challenge comes from the high variability of the children images and the low amount of images available, making transfer learning methods such as fine-tuning insufficient. Our method modifies the source network by adding layers to predict geometric and intensity transformations that are applied to the input image. The method was filled as a patent and is currently under review.
+    \item \textbf{Chapter~\ref{chap:seg}} presents a segmentation method that combines deep learning with template deformation. Building on top of the \textit{implicit template deformation} framework, a neural network is used to predict the parameters of a global and a local transformations, which are applied to a template to segment a target. The method requires only pairs of image and ground-truth segmentation to work, the ground-truth transformations are not required. The method is tested on the task of kidney segmentation in 3D US.
+    \item \textbf{Chapter~\ref{chap:conclusion}} summarizes our conclusions and discusses possible future works.
 \end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Outline}
-
-This thesis is structured in three parts, each starting with a review of the relevant literature.
-
-Chapter~\ref{chap:hyperopt} discusses the topic of hyper-parameter optimization in the context of deep learning. We focus on three methods: random search, Bayesian optimization and Hyperband, presenting a performance comparison, an improvement and a method combining them. The chapter ends with an application to the problem of MRI field-of-view classification.
-
-Chapter~\ref{chap:transfer} introduces a new transfer learning methods in order to solve the task of segmenting the kidney in 3D ultrasound across two populations: healthy adults and sick children.
-
-Chapter~\ref{chap:seg} also deals with to the segmentation of the kidney, but using a statistical shape model and a neural network predicting a deformation field for the model.
-
-Chapter~\ref{chap:conclusion} summarizes our conclusions and discusses possible future works.

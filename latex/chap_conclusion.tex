@@ -7,7 +7,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Summary of the contributions}
 
-When work on this thesis began in early 2016, deep learning had already shown its worth on natural images, but contributions in medical imaging were rare. There was still a strong lack of tools and understanding on how to build an architecture adapted to a problem, which naturally led us to the topic of hyper-parameter optimization. We resume the work we did in this area below. Now armed with a set of tools to quickly find good architectures, the second part of this thesis focused on applications. Questions of transfer learning and template deformation, and their link with deep learning were explored in this context.
+When work on this thesis began in early 2016, deep learning had already shown its worth on natural images, but contributions in medical imaging were rare. There was still a strong lack of tools and understanding on how to build architectures adapted to a specific problem, which naturally led us to the topic of hyper-parameter optimization, in order to avoid tedious architecture handcrafting and hyper-parameter fine tuning. 
+
+Now armed with a set of tools to quickly find good models, the second part of this thesis focused on applications. Questions of transfer learning and template deformation, and their link with deep learning were explored in this context. They came from the lack of data so common in medical imaging, and thus a need to re-use the limited knowledge at our disposal as much as possible. 
 
 \paragraph*{Hyper-parameter optimization}
 \begin{itemize}
@@ -28,7 +30,7 @@ The use of shape prior is still uncommon in deep learning. We proposed a new seg
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Future Work}
 
-Even though all the contributions listed in the previous section have immediate ways they could be improved, those are discussed in their respective chapters. Here we take a longer term perspective and ask ourselves what we would do with more time, taking into account how we believe the field to evolve.
+Even though all the contributions listed in the previous section have immediate ways they could be improved, those are discussed in their respective chapters. Here we take a longer term perspective and ask ourselves what we would do with more time, taking into account how we believe the field is going to evolve.
 
 \paragraph*{User interactions.}
 An important aspect of the implicit template deformation framework is that it can integrate user interactions. After the template is deformed, a user can add or remove points from the segmentation. Those are taken into account by the method, which produces a new refined segmentation. This process can be repeated as many times as required. This kind of user interaction is key in medical practice but deep learning provides no easy way to incorporate them. While some attempts have been made such as~\textcite{cicek2016MICCAI} which provides a partial segmentation as an additional input of the segmentation network, none of them forces the network to make use of them. In our method of template deformation, user input could be incorporated as additional constraints on the deformation field, while forcing the final segmentation to still be an acceptable shape.
@@ -36,8 +38,14 @@ An important aspect of the implicit template deformation framework is that it ca
 \paragraph*{A shift in applications.}
 Deep learning has fulfilled one of its promises: many of the tasks that were once difficult are now easily solvable with deep learning. The classification task of MRI field-of-view we worked on is a good example. Once the dataset is ready, automated methods of hyper-parameter optimization can be used to find a very efficient model with little manual effort. As automation tools improves and becomes more accessible\footnote{See for example \href{https://cloud.google.com/automl/}{Google AutoML}.}, many tasks will stop requiring image processing expertise to be solved. The focus will move to more challenging tasks, where the difficulty can come from a lack of data (rare disease, high variability), greater complexity such as segmentation of small structures (due to the reliance of neural networks on pooling layers), registration, surgical planning, ...
 
+\paragraph*{An integration of older methods.}
+This thesis first started completely focused on deep leaning and how it could be used to solve medical imaging problems. By the end of it, we had started working on a hybrid approach of deep learning and template deformation. Pre-deep learning methods were tailored for medical tasks, and were mostly discarded with the success of deep learning. But deep learning was developed first for natural images applications, without accounting for the differences between natural and medical images. The ideas used in those older methods (such as the use of shape information) are still relevant, and we expect their integration with deep learning will move the field forward in coming years.
+
 \paragraph*{Multi-modality, multi-task learning.}
 The idea of transfer learning is to share knowledge between more or less loosely connected problems. Expanding on this, we could imagine a multi-input multi-output model that shares knowledge over many tasks and modalities at the same time. A first step in this direction could be the construction of modality-specific pre-trained models, a medical imaging equivalent to ImageNet pre-trained models. This requires that huge dataset are available per modality, but efforts in this direction are ongoing. For example, the NIH recently released an \href{https://nihcc.app.box.com/v/ChestXray-NIHCC}{X-Ray dataset} of over $100,000$ images that could be used to build a standard X-Ray pre-trained model. If ImageNet pre-trained models can improve performance on most medical tasks, it seems sensible a more specific model would improve performance even more.
+
+\paragraph*{Differential privacy.}
+Due to the sensitive nature of medical images, sharing between research institutes or hospitals is difficult. A solution to this problem could be through the use of differential privacy. It is a mathematical framework in which the output of an algorithm is mostly the same, whether the data from one particular patient is included or not. This prevents an opponent from recovering patient information from the algorithm (it is possible to reconstruct training set images from computer vision systems, including deep neural networks, see for example~\textcite{fredrikson2015}). There has been some work to make deep neural networks differentially private (\textcite{abadi2016}), and this would allow institutions to release models trained on private data with strong guarantees of patient privacy.
 
 
 % All of the contributions presented can be developed further as we discuss in this section.

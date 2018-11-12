@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                        SEGMENTATION                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Segmentation via Template Deformation using Deep Learning}
+\chapter{Template Deformation and Deep Learning}
 \label{chap:seg}
 
 \begin{chapabstract}
@@ -24,9 +24,9 @@ In medical imaging, the use of prior knowledge can greatly facilitate the segmen
 
 Template deformation produces the segmentation by deforming a binary template to match the image. Two components are needed: a template (the shape prior) and a regularization imposed on the deformation (the shape constraint). In this work we investigate how deep learning can be used for template deformation, and in particular how it can improve the \textit{implicit template deformation} framework. The core idea is to use the network to predict the transformation to be applied to the template.
 
-Using deep learning for this gives us two advantages: (1) because the network learns on a database of images and does not have to be retrained on new images, the segmentation is extremely fast; (2) the loss function only requires the ground-truth segmentation, there is no need to have the ground-truth of the geometric deformation or additional information.
+Using deep learning for this gives us two advantages: (1) because the network learns on a database of images and does not have to be retrained on new images, the segmentation is extremely fast (even if using only CPU during inference); (2) the loss function only requires the ground-truth segmentation, there is no need to have the ground-truth of the geometric deformation or additional information.
 
-As this work was done at the very end of the PhD, the results are preliminary.
+As this work was done at the very end of the PhD, the results are still preliminary.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Template Deformation}
@@ -48,11 +48,13 @@ A review of the existing methods of template construction can be found in~\textc
 
 \subsection{Finding the transformation}
 
-There is a vast literature of methods such as \textit{Active Shape Models} (\textcite{cootes1995}), \textit{Active Appearance Models} (\textcite{cootes1998ECCV}) or \textit{Implicit Template Deformation} (\textcite{saddi2007}) that have been proposed to find the deformation to apply to the template. These methods make no use of machine learning, and instead work by minimizing some kind of energy functional. As this thesis focuses on deep learning, they are out-of-scope. We refer the interested reader to~\textcite{heimann2009} for a review of those methods.
+There is a vast literature of methods such as \textit{Active Shape Models} (\textcite{cootes1995}), \textit{Active Appearance Models} (\textcite{cootes1998ECCV}) or \textit{Implicit Template Deformation} (\textcite{saddi2007}) that have been proposed to find the deformation to apply to the template. These methods make no use of machine learning, and instead work by minimizing some kind of energy functional. 
+%As this thesis focuses on deep learning, they are out-of-scope. 
+We refer the interested reader to~\textcite{heimann2009} for a review of those methods.
 
 To the best of our knowledge, deep learning has not yet been used in the context of template models. It has however been used in the context of registration, i.e. the spatial alignment of two medical images.
 
-Convolutional neural networks have been used to regress the parameters of the registration transform from the input images (\textcite{miao2016},~\textcite{yang2016}).
+Convolutional neural networks have been used to regress the parameters of the registration transformation from the input images (\textcite{miao2016},~\textcite{yang2016}).
 
 Another approach is to estimate a similarity measure from a neural network to be used in an iterative optimization strategy (\textcite{wu2013MICCAI},~\textcite{cheng2015},~\textcite{simonovosky2016MICCAI}).
 
@@ -62,7 +64,7 @@ Recently, method using GANs (\textcite{goodfellow2014}) have been proposed.~\tex
 \section{Segmentation by Implicit Template Deformation}
 \label{sec:implicit}
 
-As this work places itself in the continuation of~\textcite{mory2012MICCAI} and~\textcite{prevost2013PHD}, we first present the \textit{Implicit Template Deformation} framework. 
+As this work places itself on top of~\textcite{mory2012MICCAI} and~\textcite{prevost2013PHD}, we first present the \textit{Implicit Template Deformation} framework. 
 
 The segmentation is defined as the zero level-set of an implicit function $\phi : \Omega \rightarrow \mathbb{R}$ where $\phi$ is positive inside the segmentation and negative outside. The set of admissible segmentations $\mathbb{S}$ is defined as the set of all implicit functions with the same topology as the implicit template $\phi_0$:
 \begin{equation}
@@ -100,7 +102,7 @@ The advantage of this decomposition is to be able to define the regularization t
     \label{fig:implicit}
 \end{figure}
 
-Once the deformation has been found through the minimization of Equation~\ref{eq:implicit}, the segmentation is obtained by applying it to the template, as illustrated in Figure~\ref{fig:implicit}.
+Once the deformation has been found through the minimization of Equation~\ref{eq:implicit}, typically through a gradient descent scheme to update $G$ and $L$ from a carefully chosen initialization, the segmentation is obtained by applying it to the template, as illustrated in Figure~\ref{fig:implicit}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Template Deformation via Deep Learning}
@@ -119,6 +121,8 @@ Figure~\ref{fig:deform_network} shows the neural network. The network predict th
 \begin{equation}
     \phi = \phi_0 \circ \ G \circ L
 \end{equation}
+
+The network architecture for the local transformation is very similar to a U-Net, as the transformation must be produced at a relatively high resolution and the U-Net aggregates information from many levels. The global transformation is predicted by a classical ConvNet. As the tasks are closely related, the classical ConvNet corresponds to the downward part of the U-Net, allowing for transfer of information.
 
 The next sections details our choice of global transformation (Section~\ref{ssec:seg_global}), of local transformation (Section~\ref{ssec:seg_local}) and how to train the network (Section~\ref{ssec:seg_training}).
 
@@ -231,7 +235,7 @@ Applying the global and local transformation to the template can be done as a la
     J \left( \phi, \hat{\phi} \right) = DICE \left( \phi, \hat{\phi} \right)% + \frac{\lambda}{2} || L - Id ||^2_2 \\
                                       = DICE \left( \phi_0 \circ G \circ L, \hat{\phi} \right)% + \frac{\lambda}{2} || L - Id ||^2_2
 \end{align}
-The only free variables are $G$ and $L$, which are predicted by the network. Training the network as standard by backpropagation on a database of images allows it to predict $G$ and $L$ for new images. 
+The only free variables are $G$ and $L$, which are predicted by the network. Training the network by backpropagation on a database of images allows it to predict $G$ and $L$ for new images. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Kidney Segmentation in 3D Ultrasound}
@@ -239,7 +243,7 @@ The only free variables are $G$ and $L$, which are predicted by the network. Tra
 
 The problem addressed is the same as in Section~\ref{sec:kidney}: kidney capsule segmentation in 3D ultrasound data from potentially ill children. The difference is that we are not in a transfer learning setting and we have access to both adults and children images simultaneously.
 
-While our new segmentation method is applicable to any kind of medical imaging segmentation problem, time constraint forced us to focus on an already available dataset. As the problem is difficult, this is still a good test of the method, though further testing is required. 
+While our new segmentation method is applicable to any kind of medical imaging segmentation problem, time constraint forced us to focus on an already available dataset. As the problem is difficult (in particular, US acquisition are very noisy), this is still a good test of the method, though further testing is required. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{Dataset}
@@ -332,6 +336,7 @@ Unlike previously, we use data augmentation. Due to the already high cost of tra
 	\hline
     Method & Dice Adults & Dice Children \\
 	\hline
+	3D U-Net (no data augmentation) & $0.81$ & $0.74$ \\
     3D U-Net & $\bm{0.89}$ & $\bm{0.82}$ \\
     Deformation & $0.85$ & $0.75$ \\
     Geometric transfo + Deformation & $0.88$ & $\bm{0.82}$ \\
@@ -343,9 +348,9 @@ Unlike previously, we use data augmentation. Due to the already high cost of tra
     \label{table:seg_results}
 \end{table}
 
-For all the models the training is done jointly on adults and children with oversampling of the children to balance the populations. Each model was trained on only one seed due to the high cost of training (around five days per model). The performance of each model is reported in Table~\ref{table:seg_results}.
+For all the models the training is done jointly on adults and children with oversampling of the children to balance the populations. Each model was trained on only one seed due to the high cost of training (around five days per model on a NVIDIA TITAN X). The performance of each model is reported in Table~\ref{table:seg_results}.
 
-The baseline for our comparison is the 3D U-Net (\textcite{cicek2016MICCAI}) described in Section~\ref{ssec:unet}. Its performance is therefore comparable to the one reported in Section~\ref{sec:kidney_res}, the only difference being the use of data augmentation. The performance goes from $0.81$ for the adults and $0.74$ for the children to $0.89$ and $0.82$, an important increase of $0.08$ for both populations. 
+The baseline for our comparison is the 3D U-Net (\textcite{cicek2016MICCAI}) described in Section~\ref{ssec:unet}. Its performance is therefore the same as the one reported in Section~\ref{sec:kidney_res}. The use of data augmentation results in a performance gain from $0.81$ for the adults and $0.74$ for the children to $0.89$ and $0.82$, an important increase of $0.08$ for both populations. 
 
 Training a model predicting only deformation fields without the geometric transformation is not enough to beat the baseline, though it does show that the idea works. When adding the geometric transformation, the results become very close to the baseline. The geometric transformation is beneficial in particular for the children. This is likely due to the fact that the template model is an adult kidney, requiring the network to learn how to shrink it when segmenting children images. The geometric transformation provides an easy way to learn this shrinking with the three scaling parameters.
 
@@ -371,12 +376,12 @@ Training a model predicting only deformation fields without the geometric transf
     \label{fig:unet_vs_deform}
 \end{figure}
 
-Even though the performance of our method is similar to the baseline, using the template model results in segmentation anatomically correct. There are no patches of disconnected voxels classified as kidney or unlikely shapes. In Figure~\ref{fig:unet_vs_deform}, we selected three images from the test set to illustrate this. In the first one, the U-Net segmented a patch of pixel in the top left disconnected from the rest\footnote{As we show only a slice of a volume, the patch could be connected through the other slices, this is not the case here.}, while our method did not. The second image is difficult as the huge black spot can be mistaken for hydronephrosis. While both networks classified it as kidney, our method kept the elongated shape of the kidney outside of the black spot. In the third image, the U-Net segmented a patch of pixels almost disconnected from the main patch which would be very difficult to obtain by deforming a template model, as our method shows. 
+Even though the performance of our method is similar to the baseline, using the template model results in anatomically correct segmentation. There are no patches of disconnected voxels classified as kidney or unlikely shapes. In Figure~\ref{fig:unet_vs_deform}, we selected three images from the test set to illustrate this. In the first one, the U-Net segmented a patch of pixel in the top left disconnected from the rest\footnote{As we show only a slice of a volume, the patch could be connected through the other slices, this is not the case here.}, while our method did not. The second image is difficult as the huge black spot can be mistaken for hydronephrosis. While both networks classified it as kidney, our method kept the elongated shape of the kidney outside of the black spot. In the third image, the U-Net segmented a patch of pixels almost disconnected from the main patch which would be very difficult to obtain by deforming a template model, as our method shows. 
 
 \begin{figure}[htbp]
     \centering
 	\includegraphics[width=\textwidth]{img_seg/transfo_matrix}
-    \caption{Distributions of each parameter of the geometric transformation for the model without penalty. Red is for the adults, blue for the children.}
+    \caption{Distributions of each parameter of the geometric transformation for the final model. Red is for the adults, blue for the children.}
     \label{fig:transfo_matrix}
 \end{figure}
 
@@ -401,7 +406,7 @@ In this chapter we presented a new segmentation method based on template deforma
 
 As this work was done at the very end of the PhD, it is still incomplete, and there are some simple modifications that would likely improve the performance. 
 
-To avoid the very low values of the scaling parameters, the solution is to add an $L_2$ regularization term to the deformation field $L$:
+To avoid the very low values of the scaling parameters, one solution is to add an $L_2$ regularization term to the deformation field $L$:
 \begin{equation}
     \mathbf{R} \left( L \right) = \frac{\lambda}{2} \sum_x \left( L - Id \right)(x)^2
 \end{equation}
