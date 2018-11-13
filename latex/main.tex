@@ -152,9 +152,11 @@
     \includepdf{cover/1ere}
 \end{titlepage}
 
-\clearpage
+\cleardoublepage
 
 \includepdf{cover/4eme}
+
+\cleardoublepage
 
 \dominitoc
 {   
@@ -162,7 +164,7 @@
     \tableofcontents
 }
 
-\clearpage
+\cleardoublepage
 
 \pagenumbering{arabic}
 
@@ -173,7 +175,7 @@
 \fancyhead[LE]{\fontsize{10}{12} \selectfont \slshape \rightmark}
 \fancyhead[RO]{\fontsize{10}{12} \selectfont \slshape \leftmark}
 \fancyhead[LO,RE]{\thepage}
-\setlength{\headheight}{15pt}
+\setlength{\headheight}{30pt}
 
 \include{chap_introduction}
 
@@ -184,6 +186,8 @@
 \include{chap_segmentation}
 
 \include{chap_conclusion}
+
+\cleardoublepage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                        BIBLIOGRAPHY                                         %
