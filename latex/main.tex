@@ -18,6 +18,8 @@
 \usepackage{bibentry}
 \usepackage{pdfpages}
 \usepackage{fancyhdr}
+\usepackage[toc]{appendix}
+\usepackage[Bjornstrup]{fncychap}
 
 \usepackage{hyperref}
 
@@ -142,8 +144,8 @@
 \addbibresource{publi.bib}
 \addbibresource{references.bib}
 
-% \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion}
-\includeonly{chap_hyperopt}
+% \includeonly{chap_introduction, chap_segmentation, chap_transfer_learning, chap_hyperopt, chap_conclusion, appendix_cholesky}
+\includeonly{chap_hyperopt, appendix_cholesky}
 
 \pagenumbering{roman}
 
@@ -163,6 +165,14 @@
     \setstretch{1.1}
     \tableofcontents
 }
+
+\cleardoublepage
+
+\listoffigures
+
+\clearpage
+ 
+\listoftables
 
 \cleardoublepage
 
@@ -186,6 +196,10 @@
 \include{chap_segmentation}
 
 \include{chap_conclusion}
+
+\begin{appendices}
+    \include{appendix_cholesky}
+\end{appendices}
 
 \cleardoublepage
 

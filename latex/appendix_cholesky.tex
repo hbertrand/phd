@@ -1,0 +1,157 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                          CHOLESKY                                           %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Incremental Cholesky Decomposition Proofs}
+\label{app:cholesky}
+
+This appendix contains the derivations for obtaining the incremental Cholesky decomposition and its inverse that are used in Section~\ref{sec:cholesky}. For recall, the Cholesky decomposition and its inverse can be decomposed into blocks where one is the previous Cholesky decomposition. We obtain the formulas by developing this block decomposition.
+
+Let us recall that the Cholesky decomposition $L_{(n)}$ of a positive definite matrix $K_{(n)}$ is a decomposition of the form:
+\begin{equation}
+	K_{(n)} = L_{(n)} L_{(n)}^T
+\end{equation}
+where $L_{(n)}$ is a lower triangular matrix. The decomposition is unique only if $K_{(n)}$ is positive definite. Since $K_{(n)}$ is a Gram matrix, it is always guaranteed to be positive semi-definite (i.e. $\forall v \in \mathbb{R}^n, \mkern10mu v^T K_{(n)} v \geq 0$). On top of that, if the rows and columns are unique (i.e. there are no duplicated data points), then it is positive definite.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section[Formula for the Cholesky decomposition]{Formula for $L_{(n+k)}$}
+
+When adding $k$ points to a Gram matrix of $n$ points, the block decomposition of the new Cholesky decomposition is:
+\begin{alignat*}{2}
+	&&L_{(n+k)} L_{(n+k)}^T &= K_{(n+k,n+k)} \\
+	\Leftrightarrow\mkern40mu
+	&&\begin{pmatrix}
+    A & B \\
+    C & D
+  \end{pmatrix}
+  \begin{pmatrix}
+    A^T & C^T \\
+    B^T & D^T
+  \end{pmatrix} &= 
+  \begin{pmatrix}
+    K_{(n,n)} & K_{(k,n)}^T \\
+    K_{(k,n)} & K_{(k,k)}
+  \end{pmatrix}
+\end{alignat*}
+$B$ is obviously $0$ since a Cholesky decomposition is lower triangular.
+
+By developing the block decomposition, we obtain the following equation for $A$:
+\begin{equation*}
+	A A^T + B B^T = A A^T = K_{(n,n)}
+\end{equation*}
+Since the Cholesky decomposition is unique, $A = L_{(n)}$. The equation for $C$ is also simple to solve:
+\begin{alignat*}{2}
+	&&C A^T + D B^T &= C L_{(n)}^T = K_{(k,n)} \\
+	\Leftrightarrow\mkern40mu
+	&&C &= K_{(k,n)} (L_{(n)}^T)^{-1}
+\end{alignat*}
+Solving for $D$ requires more work. Developing the block decomposition, we have:
+\begin{alignat*}{2}
+	&&C C^T + D D^T &= K_{(k,k)} \\
+	\Leftrightarrow\mkern40mu
+	&&D D^T &= K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T
+\end{alignat*}
+If we can show that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T$ is definite positive then $D$ is its unique Cholesky decomposition.
+
+Let $w \in \mathbb{R}^{n+k} \quad \text{s.t.} \quad w = \begin{pmatrix}
+    u \\
+    v
+  \end{pmatrix}, u \in \mathbb{R}^n, v \in \mathbb{R}^k$, we have $w^T K_{(n+k,n+k)} w \geq 0$ because $K_{(n+k,n+k)}$ is a Gram matrix. Using its block decomposition and developing it, we have:
+\begin{alignat*}{2}
+  &&\begin{pmatrix}
+    u \\
+    v
+  \end{pmatrix} ^T
+  \begin{pmatrix}
+    K_{(n,n)} & K_{(k,n)}^T \\
+    K_{(k,n)} & K_{(k,k)}
+  \end{pmatrix}
+  \begin{pmatrix}
+    u \\
+    v
+  \end{pmatrix}
+  &\geq 0 \\
+  \Leftrightarrow\mkern40mu
+  &&u^T K_{(n,n)} u + u^T K_{(k,n)}^T v +
+  v^T K_{(k,n)} u + v^T K_{(k,k)} v
+  &\geq 0 \\
+  \Leftrightarrow\mkern40mu
+  &&u^T K_{(n,n)} u + 
+  2 u^T K_{(k,n)}^T v +
+  v^T K_{(k,k)} v
+  &\geq 0
+\end{alignat*}
+Using three successive change of variables, this equation becomes a second-order polynomial. The first change is $u = K_{(n,n)}^{-1} x$:
+\begin{equation*}
+  x^T (K_{(n,n)}^T)^{-1} x + 
+  2 x^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
+  v^T K_{(k,k)} v
+  \geq 0
+\end{equation*}
+The second change is $x = t y$ where $t$ is a scalar:
+\begin{equation*}
+  t^2 y^T (K_{(n,n)}^T)^{-1} y + 
+  2 t y^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
+  v^T K_{(k,k)} v
+  \geq 0
+\end{equation*}
+Since this is true for all $y \in \mathbb{R}^n$, this is true in particular when $y = K_{(k,n)}^T v$:
+\begin{equation*}
+  t^2 v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v + 
+  2 t v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
+  v^T K_{(k,k)} v
+  \geq 0
+\end{equation*}
+The discriminant of this polynomial is negative or null because the polynomial is always positive or null:
+\begin{align*}
+  4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2 -
+  &4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
+  (v^T K_{(k,k)} v)
+  \leq 0 \\
+  \Leftrightarrow\mkern20mu
+  0 \leq (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2
+  &\leq 
+  (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
+  (v^T K_{(k,k)} v)
+\end{align*}
+$v^T K_{(k,k)} v \geq 0$ since $ K_{(k,k)}$ is a Gram matrix (i.e. positive semi-definite), meaning by necessity $v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v \geq 0$ and $K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite.
+
+Moreover, $K_{(k,k)} \geq K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$, allowing us to conclude that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite, and it is positive definite as long as none of the $k$ new combinations are duplicates of the $n$ previous combinations and $D D^T$ is its Cholesky decomposition.
+\begin{equation*}
+  D = cho(K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T) = L_{(k)}
+\end{equation*}
+The final formula for the incremental Cholesky decomposition is:
+\begin{equation}
+  L_{(n+k)} = 
+  \begin{pmatrix}
+    L_{(n)} & 0 \\
+    K_{(k,n)} (L_{(n)}^T)^{-1} & L_{(k)}
+  \end{pmatrix}
+\end{equation}
+Since this formula requires the costly computation of $L_{(n)}^{-1}$, we would also like to find an incremental formula for it.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section[Formula for the inverse Cholesky decomposition]{Formula for $L_{(n+k)}^{-1}$}
+
+A standard expression for the inversion of a block matrix is:
+\begin{equation*}
+  \begin{pmatrix}
+    A & B \\
+    C & D
+  \end{pmatrix}^{-1} = 
+  \begin{pmatrix}
+    A^{-1} + A^{-1} B (D - C A^{-1} B)^{-1} C A^{-1} & - A^{-1} B (D - C A^{-1} B)^{-1} \\
+    - (D - C A^{-1} B)^{-1} C A^{-1} & (D - C A^{-1} B)^{-1}
+  \end{pmatrix}
+\end{equation*}
+Simplifying with $L_{(n+k)}$ found previously, we have:
+\begin{equation}
+  L_{(n+k)}^{-1} =
+  \begin{pmatrix}
+    L_{(n)} & 0 \\
+    K_{(k,n)} (L_{(n)}^T)^{-1} & L_{(k)}
+  \end{pmatrix}^{-1} = 
+  \begin{pmatrix}
+    L_{(n)}^{-1} & 0 \\
+    - L_{(k)}^{-1} K_{(k,n)} (L_{(n)}^T)^{-1} L_{(n)}^{-1} & L_{(k)}^{-1}
+  \end{pmatrix}
+\end{equation}

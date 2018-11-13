@@ -56,7 +56,9 @@ This is the problem of hyper-parameter optimization viewed as black-box optimiza
 
 The most basic method is usually called \textit{grid search}. Very easy to implement, it simply tests every possible combination (typically with uniform sampling for the continuous hyper-parameters). With only a handful of hyper-parameters to optimize and with a function $f$ fast to evaluate, it can be advisable to use as a first step to get sensible boundaries on each hyper-parameter, i.e. by testing a handful of values over a very wide range to find a smaller but relevant range.
 
-But in the context of deep learning, hyper-parameters are too numerous, meaning there are too many combinations to evaluate, and each evaluation is costly. Also, a typical implementation in nested for-loops goes from one corner of the hyper-parameter space to the opposite corner in order. It is unlikely that the corner the search starts from happens to be an area filled with good models, since combinations in corners are extreme values of hyper-parameters and build atypical neural networks. 
+But in the context of deep learning, hyper-parameters are too numerous, meaning there are too many combinations to evaluate, and each evaluation is costly. Limiting oneself when choosing the hyper-parameters still leaves us with at least 5 or 6 hyper-parameters but it is easy to end up with over 30 hyper-parameters. Assuming an average of 4 values per hyper-parameters, this implies $4^5 = 1024$ combinations for a space of 5 hyper-parameters or $4^{30} \simeq 10^{18}$ combinations with 30 hyper-parameters. Grid search does not scale well, which makes it unsuitable for deep learning.
+
+Even for reasonably sized hyper-parameter space, a typical implementation in nested for-loops goes from one corner of the hyper-parameter space to the opposite corner in fixed order. It is unlikely that the corner the search starts from happens to be an area filled with good models, since combinations in corners are extreme values of hyper-parameters and build atypical neural networks. 
 
 Grid search can still be used with a wide enough sampling of the hyper-parameters to get an idea on where the interesting models are located and refine the boundaries, but even for that other methods are preferable.
 
@@ -73,13 +75,13 @@ One step above grid search is \textit{random search}. A big limitation of grid s
 		\centering
 		\centerline{\includegraphics[width=7.2cm]{img_hyperopt/rs_random}}
 	\end{minipage}
-	\caption{Loss function for a two dimensional space. (Left) Grid search. (Right) Random search. 9 combinations were tested for each method, but grid search tested only 3 values for each hyper-parameters while random search tested 9, resulting in a better solution.}
+	\caption[Comparison of grid search and random search]{Loss function for a two dimensional space. (Left) Grid search. (Right) Random search. 9 combinations were tested for each method, but grid search tested only 3 values for each hyper-parameters while random search tested 9, resulting in a better solution.}
 	\label{fig:rs}
 \end{figure}
 
-Figure~\ref{fig:rs} illustrates this. Given a hyper-parameter space of two continuous hyper-parameters, and at equal number of evaluated combinations, random search finds a better solution. It works because hyper-parameters are not equally relevant. In practice, only a few have a high impact on the performance (\textcite{bergstra2012JMLR}). In the figure, grid search only tested three values of each hyper-parameters while random search tested nine for the same cost!
+Figure~\ref{fig:rs} illustrates this. Given a hyper-parameter space of two continuous hyper-parameters, and at equal number of evaluated combinations, random search finds a better solution. It works because hyper-parameters are not equally relevant. In practice, for deep learning, only a few have a high impact on the performance (\textcite{bergstra2012JMLR}).\footnote{We do not know in advance which hyper-parameters have a high impact, otherwise we would tune only high impact hyper-parameters.} In the figure, grid search only tested three values of each hyper-parameters while random search tested nine for the same cost!
 
-In terms of implementation cost, random search requires only the ability to draw uniformly from an interval or a list, making it barely more costly than grid search, largely compensated by the gain in performance.
+In terms of implementation cost, random search requires only the ability to draw uniformly from an interval or a list, giving it the same computational cost than grid search. The increased implementation cost is largely compensated by the gain in performance.
 
 \subsubsection{Bayesian optimization}
 
@@ -94,7 +96,9 @@ The first application of evolutionary algorithms to neural networks was to evolv
 
 NEAT uses three kinds of mutations (modifying a weight, adding a connection between two nodes and adding a node in the middle of a connection) and one kind of recombination based on fitness sharing. Many variants of this algorithm have been proposed, notably HyperNEAT (\textcite{stanley2009}) which only evolves the topology and learns the weights by back-propagation. 
 
-The main drawback of NEAT and its variants is their inability to scale and evolve the large networks typical of modern deep learning.~\textcite{real2017ICML} and~\textcite{miikkulainen2017} developed approaches able to explore extremely diverse and atypical network structures and find architectures with state-of-the-art performance on computer vision tasks such as CIFAR-10. The drawback of those methods however is their excessive computational cost, making them out of our reach.
+The main drawback of NEAT and its variants is their inability to scale and evolve the large networks typical of modern deep learning.~\textcite{real2017ICML} and~\textcite{miikkulainen2017} developed approaches able to explore extremely diverse and atypical network structures and find architectures with state-of-the-art performance on computer vision tasks such as CIFAR-10. 
+
+The drawback of those methods however is their excessive computational cost, requiring thousands of iterations before starting to build good models. Coupled with their novelty, those methods were out of our reach, while the lack of scaling was too important in the older methods for us to use them in this thesis. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Reinforcement learning}
@@ -103,12 +107,14 @@ Recent advances in reinforcement learning have made possible its use to design e
 
 To address this problem,~\textcite{zoph2017} proposed testing on a smaller dataset as an approximation of the performance on the true dataset. Another suggestion is to train only partially each network (\textcite{li2017ICLR},~\textcite{zela2018}), allowing longer training time as the search is refined.
 
+While those approaches are very promising, they are too recent and costly for this thesis.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other approaches}
 
-We finish our tour with a few methods taking radically different approaches. Hyperband (\textcite{li2017ICLR}) considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. We present it in more details in Section~\ref{ssec:hyperband}.
+We finish our tour with a few methods taking radically different approaches. Hyperband (\textcite{li2017ICLR}) considers the question as a multi-armed bandit problem, where each arm is a combination and we have a finite amount of training budget to allocate to each arm. The idea is to train many models partially, and take the decision to continue training every few epochs based on the current performance. Since we chose to explore this approach, we present it in more details in Section~\ref{ssec:hyperband}.
 
-\textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization called Harmonica. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial as the model.
+\textcite{hazan2018ICLR} proposed an approach applying compressed sensing to hyper-parameters optimization called Harmonica. Like Bayesian optimization, they aim to learn the structure of the hyper-parameter space, but using a sparse polynomial.
 
 Finally,~\textcite{domhan2015} suggested predicting the learning curve of a model to decide whether to continue the training. The prediction is done using a portfolio of parametric models.
 
@@ -130,7 +136,7 @@ Finally,~\textcite{domhan2015} suggested predicting the learning curve of a mode
 		Budget required? & Mid & Mid & Low & Low & High\textsuperscript{2} & High\textsuperscript{2} & Low & Mid & Low \\
 		\hline
 	\end{tabular}
-	\caption{Comparison of different hyper-parameter optimization methods according to various criteria explained in Section~\ref{ssec:synthesis}. (1) Except for the number of epochs or training time which is controlled by the method. (2) This is quickly being reduced.}
+	\caption[Comparison of hyper-parameter optimization methods]{Comparison of different hyper-parameter optimization methods according to various criteria explained in Section~\ref{ssec:synthesis}. (1) Except for the number of epochs or training time which is controlled by the method. (2) This is quickly being reduced.}
 	\label{table:hyperopt_compare}
 \end{sidewaystable}
 
@@ -147,9 +153,9 @@ The last three criteria are subjective but relevant when choosing a method to us
 
 The first methods used for the optimization of hyper-parameters in neural networks were, without surprise, existing hyper-parameters optimization methods treating the model as black-box and which were developed for other models. While still competitive, they are limited in the architectures of networks they can explore, often working at a layer-level. 
 
-Modern approaches based on evolutionary algorithms or reinforcement learning focus on much more fine-grained architecture choices, at the unit-level. This shift from optimizing hyper-parameters to building architecture is marked notably by the problem increasingly being called Neural Architecture Search. While those methods are too resource intensive to be used in most cases, this is changing very rapidly. 
+Modern approaches based on evolutionary algorithms or reinforcement learning focus on much more fine-grained architecture choices, at the unit-level. This shift from optimizing hyper-parameters to building architecture is marked notably by the problem increasingly being called Neural Architecture Search. While those methods are too resource intensive to be used in most cases, this is changing very rapidly (from~\textcite{zoph2017ICLR} who used 800 GPUs for a month to~\textcite{pham2018ICML} who used a single GPU for less than a day). 
 
-But in the context of this thesis we worked with what was the most relevant at the time, namely Bayesian optimization, and to some extent, Hyperband.
+But in the context of this thesis we worked with what was the most relevant at the time in 2016, namely Bayesian optimization, and to some extent, Hyperband.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Bayesian Optimization}
@@ -194,7 +200,7 @@ Some such samples are shown in Figure~\ref{fig:gp_prior}. Since no data points w
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/gp_prior.png}
-	\caption{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process. The thick blue line represents the mean of the distribution and the blue area around this line is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$)}
+	\caption[Gaussian process prior using a squared exponential kernel]{Gaussian process prior using a squared exponential kernel. The thin colored lines are samples drawn from the Gaussian process. The thick blue line represents the mean of the distribution and the blue area around this line is the $95 \%$ prediction interval, i.e. all drawn samples will be in this interval with a probability of $95 \%$ (for a Normal distribution this is equal to $1.96 \sigma$)}
 	\label{fig:gp_prior}
 \end{figure}
 
@@ -250,7 +256,7 @@ This is the equation to compute when predicting new points.
     \begin{subfigure}[b]{\textwidth}
         \includegraphics[width=\textwidth]{img_hyperopt/gp_posterior_6_point}
     \end{subfigure}
-    \caption{Gaussian process posterior after fitting one point on top, six on the bottom. All the samples pass through those points and the variance is lower close to them.}
+    \caption[Gaussian process posterior]{Gaussian process posterior after fitting one point on top, six on the bottom. All the samples pass through those points and the variance is lower close to them.}
     \label{fig:gp_posterior}
 \end{figure}
 
@@ -280,7 +286,7 @@ This kernel has two hyper-parameters $\theta = \{ \sigma^2 , l \}$. $\sigma^2$ c
         \includegraphics[width=\textwidth]{img_hyperopt/gp_lengthscale_big}
         \caption{$l = 3$}
     \end{subfigure}
-    \caption{Gaussian process posterior after six points with different length-scale. On the top with a low length-scale, data points are almost irrelevant, the Gaussian process returns to its prior almost immediately. On the bottom, the GP has a very high confidence in its prediction.}
+    \caption[Gaussian process posterior with different length-scale]{Gaussian process posterior after six points with different length-scale. On the top with a low length-scale, data points are almost irrelevant, the Gaussian process returns to its prior almost immediately. On the bottom, the GP has a very high confidence in its prediction.}
     \label{fig:gp_lengthscale}
 \end{figure}
 
@@ -305,7 +311,7 @@ The chosen value of $\nu = 5/2$ means that the samples will be twice differentia
     \begin{subfigure}[b]{\textwidth}
         \includegraphics[width=\textwidth]{img_hyperopt/gp_matern_posterior}
     \end{subfigure}
-    \caption{Gaussian process using a Matérn $5/2$ kernel. On the top, the prior. On the bottom, the posterior after fitting six points.}
+    \caption[Gaussian process using a Matérn $5/2$ kernel]{Gaussian process using a Matérn $5/2$ kernel. On the top, the prior. On the bottom, the posterior after fitting six points.}
     \label{fig:gp_matern}
 \end{figure}
 
@@ -365,7 +371,7 @@ In summary, Bayesian Optimization works as follows. Given a set of explored comb
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/bo.png}
-	\caption{Bayesian Optimization on a one dimensional function. The orange curve is the true loss function, the blue one is the prediction of the Gaussian process. The green curve is the acquisition function. The next evaluation will be at the maximum of the green curve.}
+	\caption[Bayesian Optimization on a one dimensional function]{Bayesian Optimization on a one dimensional function. The orange curve is the true loss function, the blue one is the prediction of the Gaussian process. The green curve is the acquisition function. The next evaluation will be at the maximum of the green curve.}
 	\label{fig:bo}
 \end{figure}
 
@@ -433,122 +439,10 @@ However, Bayesian optimization alters the Gram matrix only by adding new rows an
 \end{equation}
 Likewise, the Cholesky decomposition and its inverse can also be decomposed into blocks where one is the previous Cholesky decomposition as we show in Section~\ref{ssec:formulas}. We then argue in Section~\ref{ssec:complexity} that this can be used to make Bayesian optimization faster by updating incrementally the Cholesky decomposition instead of fully recomputing it each time.
 
-\subsection{Deriving the formulas}
+\subsection{The incremental formulas}
 \label{ssec:formulas}
 
-Let us recall that the Cholesky decomposition $L_{(n)}$ of a positive definite matrix $K_{(n)}$ is a decomposition of the form:
-\begin{equation}
-	K_{(n)} = L_{(n)} L_{(n)}^T
-\end{equation}
-where $L_{(n)}$ is a lower triangular matrix. The decomposition is unique only if $K_{(n)}$ is positive definite. Since $K_{(n)}$ is a Gram matrix, it is always guaranteed to be positive semi-definite (i.e. $\forall v \in \mathbb{R}^n, \mkern10mu v^T K_{(n)} v \geq 0$), but if the rows and columns are unique (i.e. there are no duplicate data points), then it is positive definite.
-
-\subsubsection[Formula for the Cholesky decomposition]{Formula for $L_{(n+k)}$}
-
-When adding $k$ points to a Gram matrix of $n$ points, the block decomposition of the new Cholesky decomposition is:
-\begin{alignat*}{2}
-	&&L_{(n+k)} L_{(n+k)}^T &= K_{(n+k,n+k)} \\
-	\Leftrightarrow\mkern40mu
-	&&\begin{pmatrix}
-    A & B \\
-    C & D
-  \end{pmatrix}
-  \begin{pmatrix}
-    A^T & C^T \\
-    B^T & D^T
-  \end{pmatrix} &= 
-  \begin{pmatrix}
-    K_{(n,n)} & K_{(k,n)}^T \\
-    K_{(k,n)} & K_{(k,k)}
-  \end{pmatrix}
-\end{alignat*}
-$B$ is obviously $0$ since a Cholesky decomposition is lower triangular.
-
-By developing the block decomposition, we obtain the following equation for $A$:
-\begin{equation*}
-	A A^T + B B^T = A A^T = K_{(n,n)}
-\end{equation*}
-Since the Cholesky decomposition is unique, $A = L_{(n)}$. The equation for $C$ is also simple to solve:
-\begin{alignat*}{2}
-	&&C A^T + D B^T &= C L_{(n)}^T = K_{(k,n)} \\
-	\Leftrightarrow\mkern40mu
-	&&C &= K_{(k,n)} (L_{(n)}^T)^{-1}
-\end{alignat*}
-Solving for $D$ requires more work. Developing the block decomposition, we have:
-\begin{alignat*}{2}
-	&&C C^T + D D^T &= K_{(k,k)} \\
-	\Leftrightarrow\mkern40mu
-	&&D D^T &= K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T
-\end{alignat*}
-If we can show that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)})^{-1} K_{(k,n)}^T$ is definite positive then $D$ is its unique Cholesky decomposition.
-
-Let $w \in \mathbb{R}^{n+k} \quad \text{s.t.} \quad w = \begin{pmatrix}
-    u \\
-    v
-  \end{pmatrix}, u \in \mathbb{R}^n, v \in \mathbb{R}^k$, we have $w^T K_{(n+k,n+k)} w \geq 0$ because $K_{(n+k,n+k)}$ is a Gram matrix. Using its block decomposition and developing it, we have:
-\begin{alignat*}{2}
-  &&\begin{pmatrix}
-    u \\
-    v
-  \end{pmatrix} ^T
-  \begin{pmatrix}
-    K_{(n,n)} & K_{(k,n)}^T \\
-    K_{(k,n)} & K_{(k,k)}
-  \end{pmatrix}
-  \begin{pmatrix}
-    u \\
-    v
-  \end{pmatrix}
-  &\geq 0 \\
-  \Leftrightarrow\mkern40mu
-  &&u^T K_{(n,n)} u + u^T K_{(k,n)}^T v +
-  v^T K_{(k,n)} u + v^T K_{(k,k)} v
-  &\geq 0 \\
-  \Leftrightarrow\mkern40mu
-  &&u^T K_{(n,n)} u + 
-  2 u^T K_{(k,n)}^T v +
-  v^T K_{(k,k)} v
-  &\geq 0
-\end{alignat*}
-Using three successive change of variables, this equation becomes a second-order polynomial. The first change is $u = K_{(n,n)}^{-1} x$:
-\begin{equation*}
-  x^T (K_{(n,n)}^T)^{-1} x + 
-  2 x^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
-  v^T K_{(k,k)} v
-  \geq 0
-\end{equation*}
-The second change is $x = t y$ where $t$ is a scalar:
-\begin{equation*}
-  t^2 y^T (K_{(n,n)}^T)^{-1} y + 
-  2 t y^T (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
-  v^T K_{(k,k)} v
-  \geq 0
-\end{equation*}
-Since this is true for all $y \in \mathbb{R}^n$, this is true in particular when $y = K_{(k,n)}^T v$:
-\begin{equation*}
-  t^2 v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v + 
-  2 t v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v +
-  v^T K_{(k,k)} v
-  \geq 0
-\end{equation*}
-The discriminant of this polynomial is negative or null because the polynomial is always positive or null:
-\begin{align*}
-  4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2 -
-  &4 (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
-  (v^T K_{(k,k)} v)
-  \leq 0 \\
-  \Leftrightarrow\mkern20mu
-  0 \leq (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)^2
-  &\leq 
-  (v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v)
-  (v^T K_{(k,k)} v)
-\end{align*}
-$v^T K_{(k,k)} v \geq 0$ since $ K_{(k,k)}$ is a Gram matrix (i.e. positive semi-definite), meaning by necessity $v^T K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T v \geq 0$ and $K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite.
-
-Moreover, $K_{(k,k)} \geq K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$, allowing us to conclude that $K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T$ is positive semi-definite, and it is positive definite as long as none of the $k$ new combinations are duplicates of the $n$ previous combinations and $D D^T$ is its Cholesky decomposition.
-\begin{equation*}
-  D = cho(K_{(k,k)} - K_{(k,n)} (K_{(n,n)}^T)^{-1} K_{(k,n)}^T) = L_{(k)}
-\end{equation*}
-The final formula for the incremental Cholesky decomposition is:
+The derivation of both formulas can be found in Appendix~\ref{app:cholesky}. We present here only the final results. The formula of the incremental Cholesky decomposition is:
 \begin{equation}
   L_{(n+k)} = 
   \begin{pmatrix}
@@ -556,22 +450,7 @@ The final formula for the incremental Cholesky decomposition is:
     K_{(k,n)} (L_{(n)}^T)^{-1} & L_{(k)}
   \end{pmatrix}
 \end{equation}
-Since this formula requires the costly computation of $L_{(n)}^{-1}$, we would also like to find an incremental formula for it.
-
-\subsubsection[Formula for the inverse Cholesky decomposition]{Formula for $L_{(n+k)}^{-1}$}
-
-A standard expression for the inversion of a block matrix is:
-\begin{equation*}
-  \begin{pmatrix}
-    A & B \\
-    C & D
-  \end{pmatrix}^{-1} = 
-  \begin{pmatrix}
-    A^{-1} + A^{-1} B (D - C A^{-1} B)^{-1} C A^{-1} & - A^{-1} B (D - C A^{-1} B)^{-1} \\
-    - (D - C A^{-1} B)^{-1} C A^{-1} & (D - C A^{-1} B)^{-1}
-  \end{pmatrix}
-\end{equation*}
-Simplifying with $L_{(n+k)}$ found previously, we have:
+Since this formula requires the costly computation of $L_{(n)}^{-1}$, we are also interested in an incremental formula for it, which is:
 \begin{equation}
   L_{(n+k)}^{-1} =
   \begin{pmatrix}
@@ -630,7 +509,7 @@ From this equation we can compute the number of draws required to have drawn a m
 		Top $10 \%$ & 7 & 29 & 44 \\
 		\hline
 	\end{tabular}
-	\caption{Number of draws required to have drawn a model in the top $\alpha \%$ with probability $p$ in a space of 100 000 combinations.}
+	\caption[Theoretical performance of random search]{Number of draws required to have drawn a model in the top $\alpha \%$ with probability $p$ in a space of 100 000 combinations.}
 	\label{table:random_search_bounds}
 \end{table}
 
@@ -695,7 +574,7 @@ This distinction is important because it changes our evaluation of the methods. 
             \centering
             \includegraphics[width=\linewidth]{img_hyperopt/cifar_bo}
     \end{subfigure}%
-    \caption{Comparing the model order chosen by random search (top) vs Bayesian optimization (bottom).}
+    \caption[Comparing random search and Bayesian optimization]{Comparing the model order chosen by random search (top) vs Bayesian optimization (bottom).}
 	\label{fig:cifar_loss}
 \end{figure}
 
@@ -720,7 +599,7 @@ First, we look at the order in which models where selected during one run, shown
 		Top $10 \%$ & $10 \pm 10$ & $62$ & $7 \pm 7$ & $36$ \\
 		\hline
 	\end{tabular}
-	\caption{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within $\alpha \%$ mean within $\alpha \%$ of the performance of the best model.}
+	\caption[Average and worst number of draws taken by each method to reach different goals over 600 runs]{Average and worst number of draws taken by each method to reach different goals over 600 runs. Within $\alpha \%$ mean within $\alpha \%$ of the performance of the best model.}
 	\label{table:search_average}
 \end{table}
 
@@ -733,7 +612,7 @@ In comparison, Bayesian optimization did a lot better on every goal. On average 
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/bo_error_time.png}
-	\caption{Model performance predicted by the Gaussian process in red vs the true performance in blue. The colored area is the $95 \%$ prediction interval.}
+	\caption[Model performance predicted by the Gaussian process vs the true performance]{Model performance predicted by the Gaussian process in red vs the true performance in blue. The colored area is the $95 \%$ prediction interval.}
 	\label{fig:bo_error_time}
 \end{figure}
 
@@ -815,7 +694,7 @@ For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration
 		\centering
 		\centerline{\includegraphics[width=7.2cm]{img_hyperopt/cifar_10_aggregate_median_val_loss_per_minute}}
 	\end{minipage}
-	\caption{(Left) Loss of the best model found at a given time by each method. (Right) Running median of the loss of all tested models for each method.}
+	\caption[Loss of the best model and running median of the loss as the methods progress]{(Left) Loss of the best model found at a given time by each method. (Right) Running median of the loss of all tested models for each method.}
 	\label{fig:combining_loss}
 \end{figure}
 
@@ -840,7 +719,7 @@ When drawing a large group of models at the same time as required by Hyperband, 
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/combine_overfit}
-	\caption{The problem with predicting model performance at 3 minutes (dotted blue line). Models that trained faster (due to being smaller, red line) have better performance at 3 minutes than bigger models (green line), however they overfit shortly after while the bigger models end up with a better performance.}
+	\caption[Why predicting model performance at 3 minutes lead to overfitting]{The problem with predicting model performance at 3 minutes (dotted blue line). Models that trained faster (due to being smaller, red line) have better performance at 3 minutes than bigger models (green line), however they overfit shortly after while the bigger models end up with a better performance.}
 	\label{fig:combine_overfit}
 \end{figure}
 
@@ -912,7 +791,7 @@ Given an MRI volume we would like to know which anatomical regions are contained
 		Spine & 390 & 9790 \\
 		\hline
 	\end{tabular}
-	\caption{Content of the dataset.}
+	\caption{Content of the MRI field-of-view dataset.}
 	\label{table:dataset}
 \end{table}
 
@@ -1009,7 +888,7 @@ To explore this hyper-parameter space, we used Bayesian optimization, as describ
 \begin{figure}[htb]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/mrfov_bo_ei}
-	\caption{Performance of the models in the order they were trained. Each dot is a model. The red line represents the performance of the best model found until this point. The models with a loss of $2.5$ are models that could not be trained as they were too big.}
+	\caption[Performance of the models in the order they were trained]{Performance of the models in the order they were trained. Each dot is a model. The red line represents the performance of the best model found until this point. The models with a loss of $2.5$ are models that could not be trained as they were too big.}
 	\label{fig:mrfov_bo_ei}
 \end{figure}
 
@@ -1063,7 +942,7 @@ The last important factor to consider is the total number of weights. The baseli
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/fullbody_error}
-	\caption{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and ground truth. (b) Raw model prediction. (c) After smoothing. (d) Final prediction, after selecting the best transitions. Highlighted in red are the errors compared to the ground truth.}
+	\caption[Slice by slice prediction on a full body volume]{Slice by slice prediction on a full body volume. From top to bottom: (a) Image and ground truth. (b) Raw model prediction. (c) After smoothing. (d) Final prediction, after selecting the best transitions. Highlighted in red are the errors compared to the ground truth.}
 	\label{fig:full_body}
 \end{figure}
 
@@ -1110,7 +989,7 @@ This result implies that the optimal boundary slices are the slices where adjace
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/valid_transitions}
-	\caption{Example of valid and invalid transitions. Pelvis/abdomen and abdomen/chest are valid as they are from adjacent classes, but chest/pelvis is invalid.}
+	\caption[Example of valid and invalid transitions]{Example of valid and invalid transitions. Pelvis/abdomen and abdomen/chest are valid as they are from adjacent classes, but chest/pelvis is invalid.}
 	\label{fig:valid_transitions}
 \end{figure}
 
