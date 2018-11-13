@@ -204,4 +204,12 @@
 \printbibliography[prenote=clicknote,heading=bibintoc,title={Bibliography},notkeyword=own]
 \@openrighttrue\makeatother 
 
+\newcommand*\cleartoleftpage{%
+   \clearpage
+   \ifodd\value{page}\hbox{}\vspace*{\fill}\thispagestyle{empty}\newpage\fi
+}
+\cleartoleftpage
+
+\includepdf{cover/4eme}
+
 \end{document}

@@ -21,11 +21,15 @@ This chapter introduces the problem of hyper-parameter optimization for neural n
 \section{Defining the Problem}
 \label{sec:ho_lit}
 
-The problem of hyper-parameter optimization appears when a model is governed by numerous hyper-parameters that are difficult to manually tune due to a lack of understanding of their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations, but its number grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
+The problem of hyper-parameter optimization appears when a model is governed by hyper-parameters, i.e. parameters that are not learned by the model but must be chosen by the user. Automated methods for tuning them become worthwhile when hyper-parameters are numerous and difficult to manually tune due to a lack of understanding of their effects. The problem gets worse when the hyper-parameters are not independent and it becomes necessary to tune them at the same time. The most intuitive solution is to test all possible combinations by discretizing the hyper-parameter space and choosing an order of evaluation, a method called \textit{grid search}. This method does not scale because the number of combinations grows exponentially with the number of hyper-parameters, making this approach usually unusable for neural networks.
 
 In practice, as it is usually impossible to prove the optimality of a solution without testing all solutions, the accepted solution is the best found in the budget allocated by the user to the search.
 
-Even though this problem appears in all kinds of situations, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them.
+Even though this problem appears in all kinds of situations, we are interested here in the optimization of deep learning models, as they have many hyper-parameters and we lack the understanding and the theoretical tools to tune them. The hyper-parameters fall in two categories: the ones that affect the architecture of the network (such as the number or type of layers) and the ones that affect the training of the network (such as the learning rate or the batch size).
+
+In the case of deep learning, evaluating a combination (a specific network) is costly in time and computing resources. Moreover we have little understanding of the influence of each hyper-parameter on the performance of the model, resulting in very large boundaries and a much bigger space than needed. The situation is even worse since combinations near the boundaries of the hyper-parameter space can build a network too big to fit in the available memory, requiring to have a way to handle evaluation failures. 
+
+While it is tempting to simply return an extremely bad performance, this causes problems to methods assuming some structure in the hyper-parameter space. For example, a continuous hyper-parameter that gives a smooth output will suddenly have a discontinuity, and a method assuming smoothness (such as Bayesian optimization) might not work anymore. In practice, there are method-dependent solutions to this problem. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Notations}
@@ -34,6 +38,8 @@ Even though this problem appears in all kinds of situations, we are interested h
 In this chapter we refer to a \textit{model} as a neural network, even though the black-box methods presented in Section~\ref{ssec:black_box} work for other machine learning models. The \textit{parameters} of a model are the weights of the network which are learned during training. The \textit{hyper-parameters} are the parameters governing the architecture of the networks (such as the number of layers or the type of layers) and the ones governing the training phase (such as the learning rate or the batch size). 
 
 A \textit{hyper-parameter space} $\mathrm{X}$ is a hypercube where each dimension is a hyper-parameter and the boundaries of the hypercube are the boundaries of each hyper-parameter. Each point in the hyper-parameter space is referred to as a \textit{combination} $\mathrm{x} \in \mathrm{X}$. To each combination is associated a value $\mathrm{y}$ corresponding to the performance metric of the underlying neural network on the task it is trained to solve. We name $f$ a function taking as input a combination $\mathrm{x}$, build and train the underlying model and output its performance $f\left( \mathrm{x} \right)$.
+
+Concretely in the case of deep learning, $f$ is the process that build and train a neural network specified by a set of hyper-parameters $\mathrm{x}$, and returns the loss of the model which serves as the performance metric.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Black-box optimization}
@@ -45,10 +51,6 @@ From the notation of Section~\ref{ssec:notation}, the goal of hyper-parameter op
 \end{equation}
 
 This is the problem of hyper-parameter optimization viewed as black-box optimization. Methods in this category are independent from the model and could be used for any kind of mathematical function. However the hyper-parameters we are interested in are of a varied nature (continuous, discrete, categorical), limiting us to derivative-free optimization methods. This section is not a complete review of derivative-free algorithms, but an overview of the popular algorithms used specifically for hyper-parameter optimization.
-
-Additionally, since the function $f$ is a process training a neural network, evaluating a combination is costly in time and computing resources. Moreover we have little understanding of the influence of each hyper-parameter on the performance of the model, resulting in very large boundaries and a much bigger space than needed. The situation is even worse since combinations near the boundaries of the hyper-parameter space can build a network too big to fit in the available memory, requiring to have a way to handle evaluation failures. 
-
-While it is tempting to simply return an extremely bad performance, this causes problems to methods assuming some structure in the hyper-parameter space. For example, a continuous hyper-parameter that gives a smooth output will suddenly have a discontinuity, and a method assuming smoothness might not work anymore. In practice, there are method-dependent solutions to this problem.
 
 \subsubsection{Grid search}
 
@@ -838,13 +840,13 @@ When drawing a large group of models at the same time as required by Hyperband, 
 \begin{figure}[htbp]
 	\centering
 	\includegraphics[width=\linewidth]{img_hyperopt/combine_overfit}
-	\caption{}
+	\caption{The problem with predicting model performance at 3 minutes (dotted blue line). Models that trained faster (due to being smaller, red line) have better performance at 3 minutes than bigger models (green line), however they overfit shortly after while the bigger models end up with a better performance.}
 	\label{fig:combine_overfit}
 \end{figure}
 
-Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to be fully trained by the time of Hyperband's first evaluation (after 3 minutes of training) and to start overfitting immediately after. This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, despite this side-effect.
+Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to have converged to their best performance by the time of Hyperband's first evaluation (after 3 minutes of training) and to start overfitting immediately after (red line in Figure~\ref{fig:combine_overfit}). This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, despite this side-effect.
 
-While using the prediction at 27 minutes instead would avoid the overfitting, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as these authors study models to extrapolate learning curves.
+While using the prediction at 27 minutes instead would avoid choosing the smaller models that overfit, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as these authors study models to extrapolate learning curves.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
@@ -855,7 +857,7 @@ This section describes and extends work presented at ISBI 2017 (\textcite{bertra
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dataset and problem description}
 
-\begin{figure}[htb]
+\begin{figure}[htbp]
         \begin{subfigure}[b]{0.25\textwidth}
                 \centering
                 \includegraphics[width=.95\linewidth]{img_hyperopt/Abdomen_785}
