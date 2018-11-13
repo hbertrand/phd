@@ -781,9 +781,26 @@ We compare the three methods presented above: Bayesian optimization, Hyperband, 
 
 Comparison was done on the CIFAR-10 dataset (\textcite{krizhevsky2009}), which is a classification task on $32 \times 32$ images. The image set was split into $50\%$ for the training set used to train the neural networks, $30\%$ for the validation set used for the Bayesian model selection and the rest as test set used for the reported results below. 
 
-Each method is allocated a total budget $B = 4000$ minutes that it is free to allocate however it wants. The choice of having a budget in time means that models will not be trained in epochs as usual, but in minutes. This is a practical choice that allows estimating accurately the total time that the search takes, though it has the effect of favoring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU. The training is done on two NVIDIA TITAN X.
+Each method is allocated a total budget $B = 4000$ minutes meaning the sum of all the models training time must be equal to 4000 at the end of the process. The choice of having a budget in time means that models will not be trained in epochs as usual, but in minutes. This is a practical choice that allows estimating accurately the total time that the search takes, though it has the effect of favoring small networks. Indeed, two models trained an equal amount of time will not have seen an equal amount of data if one model is bigger and thus slower than the other. The choice to constrain in time instead of epoch means that the quantity of data seen by the models depends on the GPU. The training is done on two NVIDIA TITAN X.
 
-The chosen architecture is a standard convolutional neural network with varying number of layers, number of filters and filter size per layer. Other hyper-parameters involved in the training method are: the learning rate, the batch size and the presence of data augmentation. In the end there is 6 hyper-parameters to tune for a total of 19 200 possible configurations.
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{ | l | c | }
+		\hline
+		Hyper-parameter & Range of values \\ \hline
+		Number of convolutional blocks & $\left[ 1; 5\right]$ \\
+		Number of convolutional layers per block & $\left[ 1; 5\right]$ \\
+		Number of filters per layer & $\left[ 2; 7\right]$ \\
+		Filter size & $\left\{ 3; 5; 7; 9 \right\}$ \\
+		Learning rate & $\left\{ 10^{-5}; 10^{-4}; 10^{-3}; 10^{-2} \right\}$ \\
+		Batch size & $\left[ 2; 9\right]$ \\
+		\hline
+	\end{tabular}
+	\caption{Hyper-parameter space explored by the three methods.}
+	\label{table:hyperspace_combine}
+\end{table}
+
+The chosen architecture is a standard convolutional neural network with varying number of layers, number of filters and filter size per layer. Other hyper-parameters involved in the training method are: the learning rate, the batch size and the presence of data augmentation. In total there are 6 hyper-parameters to tune for a total of 19 200 possible configurations, displayed in Table~\ref{table:hyperspace_combine}.
 
 For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration and are trained for a maximum of 27 minutes, and $\eta = 3$ which means that $1/3$ of the models are kept at each evaluation. In the case of Bayesian optimization, each model was trained $30$ minutes but they are chosen sequentially.
 
@@ -803,20 +820,27 @@ For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration
 The evaluation measure that matters when comparing methods is the loss of the best model found at a given time, and is illustrated in Figure~\ref{fig:combining_loss} for the two individual methods and their combination (5 runs each). 
 These results suggest that Bayesian optimization (in blue) performs slightly worse than both other methods, and that Hyperband with Bayesian optimization (in red) finds a better model quicker than Hyperband (in green). However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this evaluation measure. 
 
-It might be more informative to look at the running median of the loss of all models trained at a given time. Even if in the end only the best model matters, the running median gives us an idea of the quality of the models tried. Bayesian optimization performs notably worse than the other two methods. Hyperband and Hyperband + BO have similar performance, though Hyperband + BO seems slightly better.
+It is more informative to look at the running median of the loss of all models trained at a given time, as it gives us an idea of the quality of the models tried as the methods progress. Ideally the running median should go down for Bayesian optimization and Hyperband as more models are tested and the methods either learn the shape of the space or stop training inefficient models. Bayesian optimization performs notably worse than the other two methods. Hyperband and Hyperband + BO have similar performance, though Hyperband + BO seems slightly better.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Discussion}
 
 Due to the part of chance in all three methods, five runs are not enough to draw definite conclusions on their performance. Ideally hundreds of runs would have been needed, and the computational cost of this endeavor was the main reason we did not pursue further this problem.
 
-While the seemingly low performance improvement of combining Hyperband and Bayesian optimization may be discouraging, there are two problems with our specific approach. 
+While the general idea of combining Hyperband and Bayesian optimization is valid, there are two problems with our specific approach. 
 
 As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. However the resulting distribution was very close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. This is why our version of Hyperband + BO performed barely better than Hyperband alone. 
 
-One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance has for effect of discouraging the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allows drawing many models simultaneously. 
+One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance discourages the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allows drawing many models simultaneously. 
 
 When drawing a large group of models at the same time as required by Hyperband, the cost of this process becomes important as the Gram matrix of the Gaussian process needs to be inverted many times. The incremental Cholesky decomposition presented in Section~\ref{sec:cholesky} could be used to make the process faster.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\linewidth]{img_hyperopt/combine_overfit}
+	\caption{}
+	\label{fig:combine_overfit}
+\end{figure}
 
 Informal observations of the chosen models revealed a second problem. After a few iterations, many of the models chosen tended to be fully trained by the time of Hyperband's first evaluation (after 3 minutes of training) and to start overfitting immediately after. This was due to how Bayesian optimization handled the training time. Since all models were trained at least 3 minutes, but only some trained longer, the Gaussian process predictions were much more accurate at 3 minutes than at 27 minutes. This was our reason to use the prediction at 3 minutes, despite this side-effect.
 
@@ -1056,8 +1080,7 @@ From this last observation, we note that our goal is to find contiguous anatomic
 %$\forall i \in [1; N], Z^m_i < Z^M_i$ (the ending slice is after the starting slice) and 
 $\forall i \in [1; N], Z^m_{i+1} \ge Z^M_i$ (a region cannot start before the end of the previous region). The network outputs the probability of a slice to belong to a region $P_i \left( Z \right)$.
 
-We translate these boundary 
-The optimal boundary slices are the solutions to the following linear program:
+We translate these constraints on region boundaries and the fact that intuitively, the best region between two slices is the one that maximizes a region probability, through the following constrained linear program:
 \begin{equation}
     \begin{array}{ll@{}ll}
     \text{minimize}  & - \displaystyle\sum\limits_{i=1}^{N} \int_{Z_i^m}^{Z_i^M} P_i(z) dz &\\
@@ -1078,9 +1101,16 @@ From the partial derivatives, we obtain:
 \end{align*}
 Setting the derivatives at zero, the optimal boundary slices must verify:
 \begin{equation}
-    P_i \left( Z_i^M \right) = P_{i+1} \left( Z_{i+1}^m \right)
+    \lambda_i = P_i \left( Z_i^M \right) = P_{i+1} \left( Z_{i+1}^m \right)
 \end{equation}
-This last constraint means that the boundary slices must be at the intersections between two successive regions. To clarify, a slice where the probability of belonging to the pelvis is equal to the probability of belonging to the abdomen is a potential boundary slice, but an intersection slice between pelvis and head is not.
+This result implies that the optimal boundary slices are the slices where adjacent regions intersect. For example, a slice where the probability of belonging to the pelvis is equal to the probability of belonging to the abdomen is a potential boundary slice, but an intersection slice between pelvis and head is not. We show an example of valid and invalid transitions slices in Figure~\ref{fig:valid_transitions}.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\linewidth]{img_hyperopt/valid_transitions}
+	\caption{Example of valid and invalid transitions. Pelvis/abdomen and abdomen/chest are valid as they are from adjacent classes, but chest/pelvis is invalid.}
+	\label{fig:valid_transitions}
+\end{figure}
 
 To find the optimal boundary slices, we find all the valid intersection slices, construct all the valid sets of transitions and compute the function defined in Equation~\ref{eq:optimal_boundary}. The minimum is the optimal set of boundary slices. Following the example in Figure~\ref{fig:full_body}-d, the final prediction is wrong only at the extremities of the volume (our decision scheme forces to pick a class) and is in minor disagreement with the ground truth legs/pelvis boundary. The only error of consequence is the abdomen/chest boundary. Compared to the raw prediction which was wrong for the pelvis and chest, the improvement is clearly visible.
 
