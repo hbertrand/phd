@@ -27,7 +27,7 @@ But to be useful, transfer learning must be faster or more convenient than simpl
 \begin{figure}[htb]
     \centering
 	\includegraphics[width=0.5\textwidth]{img_transfer/transfer_types.png}
-    \caption{Transfer learning can be divided into four categories depending on how the domains and the tasks are related.}
+    \caption[Transfer learning categories]{Transfer learning can be divided into four categories depending on how the domains and the tasks are related.}
     \label{fig:transfer_types}
 \end{figure}
 
@@ -71,16 +71,23 @@ There has been relatively little work in this setting.~\textcite{dai2008ICML} pr
 
 One method has become the \textit{de facto} face of transfer learning for deep neural networks, due to its simplicity and versatility: fine-tuning (\textcite{hinton2006},~\textcite{bengio2007NIPS}). The idea is that the features learned by a neural network are generic enough, so that it becomes interesting to re-use them on a different domain, for a different task, or both. No modifications to the architecture are done. The only difference is that the weights of the network are not initialized randomly, but set to the final weights learned on the source domain.
 
-It is not always necessary, or even a good idea, to re-train the whole network. If the target dataset is too small, full fine-tuning risks overfitting. But then, which layers should be fine-tuned? Lower layers tend to be more generic, while higher layers tend to be specialized to the task (\textcite{yosinski2014NIPS}), suggesting that it would be better to fine-tune only the last $n$ layers of the network. An additional advantage is that it is faster as there is no need to back-propagate to the lower layers. The exact value of $n$ is entirely problem-specific, the closer the domains and the tasks are, the less layers need to be fine-tuned.
+\begin{figure}[htbp]
+    \centering
+	\includegraphics[width=\textwidth]{img_transfer/alexnet_gabor}
+    \caption[Gabor filters learned by AlexNet]{The first convolutional layer of AlexNet learned many filters very similar to Gabor filters. (Source:~\textcite{krizhevsky2012NIPS})}
+    \label{fig:alexnet_gabor}
+\end{figure}
+
+It is not always necessary, or even a good idea, to re-train the whole network. If the target dataset is too small, full fine-tuning risks overfitting. But then, which layers should be fine-tuned? Lower layers tend to be more generic, while higher layers tend to be specialized to the task (\textcite{yosinski2014NIPS}), suggesting that it would be better to fine-tune only the last $n$ layers of the network. As illustrated in Figure~\ref{fig:alexnet_gabor}, the AlexNet architecture trained on ImageNet learns filters very similar to Gabor filters in its first convolutional layer, showing their genericity. An additional advantage is that it is faster as there is no need to back-propagate to the lower layers. The exact value of $n$ is entirely problem-specific, the closer the domains and the tasks are, the less layers need to be fine-tuned.
 
 Moreover the source dataset does not need to be closely related to the target dataset. A network trained for classification on the ImageNet dataset (\textcite{imagenet}) can be fine-tuned on other natural images dataset for classification or even detection and improve the results over training from scratch (\textcite{oquab2014CVPR},~\textcite{razavian2014CVPR}).
 
 An alternative to fine-tuning is feature extraction (\textcite{donahue14PMLR},~\textcite{sermanet2014ICLR}). It is similar to fine-tuning in that it uses the fact that the features learned by the lower layers of a neural network are fairly generic. But instead of modifying the higher layers of the network, here they are discarded and the output of the lower layers are used as features for a completely different model, not necessarily a neural network (see Figure~\ref{fig:feature_extraction}). Features extracted from natural images have been shown to be useful to medical images (\textcite{shin2016},~\textcite{bar2015ISBI},~\textcite{vanginneken2015ISBI}).
 
-\begin{figure}[ht]
+\begin{figure}[htbp]
     \centering
-	\includegraphics[width=\textwidth]{latex/img_transfer/feature_extraction.pdf}
-    \caption{Feature Extraction. The network at the top is trained on natural images. It can be reused on medical images by extracting the features at a given layer of the network and using them as the input of a new model.}
+	\includegraphics[width=\textwidth]{img_transfer/feature_extraction}
+    \caption[Feature Extraction]{Feature Extraction. The network at the top is trained on natural images. It can be reused on medical images by extracting the features at a given layer of the network and using them as the input of a new model.}
     \label{fig:feature_extraction}
 \end{figure}
 
@@ -105,7 +112,7 @@ Likewise, when solving a task on different domains accessible from the start, it
 
 %A common (and often disappointing) scenario in clinical settings is to expect an algorithm, built on a specific class of medical images, to succeed at the same task on data judged similar by the clinician. Focusing on the particular class of deep learning-based methods, we propose a transfer approach to, if not instantly, quickly satisfy this expectation. We work under the assumption that no access to the original training database is possible, as it is frequently the case in practice. 
 
-The clinical problem motivating this work is the kidney capsule segmentation in 3D ultrasound data from potentially ill children. These images have a high amount of noise, strong dependency on the operator, and important organ shape variability induced by subjects age and degree of illness. Moreover we have limited access to such volumes. In contrast, a much larger database of ultrasound kidney volumes of healthy adults is available, from which we build a successful segmenting deep network. We aim to transfer this network knowledge to the pediatric data. 
+The clinical problem motivating this work is the kidney capsule segmentation in 3D ultrasound data from potentially ill children. These images have a high amount of noise, strong dependency on the operator, and important organ shape variability induced by subjects age and degree of illness. Moreover we have limited access to such volumes. In contrast, a much larger database of ultrasound kidney volumes of healthy adults is available, from which we build a successful segmenting deep network. We aim to transfer the knowledge (anatomy, US signal, ...) captured by this network to the pediatric data. 
 
 This work has contributions in both the clinical and technical domains: (i) a deep learning based algorithm for kidney capsule segmentation in 3D ultrasound data (Section~\ref{sec:kidney_baseline}), and (ii) a new approach to perform domain adaptation of a pre-trained neural network (Section~\ref{sec:transfo}). In addition we present experiments comparing different transfer methods according to performance, training time and added complexity to determine the trade-offs of each method (Section~\ref{sec:kidney_res}), and discuss their results, examining the segmentation errors to suggest potential improvements.
 
@@ -152,6 +159,7 @@ The volumes we give to the network have been down-sampled to a resolution of $4 
 \section{Baseline}
 \label{sec:kidney_baseline}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{3D U-Net}
 \label{ssec:unet}
 
@@ -172,6 +180,7 @@ where $Y$ is the ground truth segmentation and $\hat{Y}$ is the predicted segmen
 
 Moreover, introducing Spatial Dropout (\textcite{tompson2015CVPR}) after each convolution-sampling block proved to significantly improve our results by preventing over-fitting. Whereas standard Dropout (\textcite{srivastava2014}) randomly sets pixels in the feature maps at zero, Spatial Dropout randomly sets filters at zero, making it more relevant for convolutional layers.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Training the baseline}
 \label{ssec:training_baseline}
 
@@ -181,15 +190,16 @@ Three models are used as baseline: one trained on adults kidneys only, which wil
 
 These baseline models allow us to judge the quality of each transfer method. A good transfer method should perform better (or close to) on the children kidneys than the children only network, while staying close to the performance of the adults only network on the adults. The joint model represents the ideal performance we can hope for on adults and children. Results are displayed in Table~\ref{table:results}, and illustrated in Figure~\ref{fig:mseg}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Fine-tuning}
 \label{ssec:baseline_finetune}
 
 The adult baseline network is fine-tuned on the children dataset, resulting in an important drop of performance on the adults and a comparable improvement on the children (see Table~\ref{table:results}). This is obtained by fine-tuning the whole network. 
 
-\begin{figure}[htb]
+\begin{figure}[htbp]
     \centering
 	\includegraphics[width=0.7\textwidth]{img_transfer/partial_transfer}
-    \caption{Partial fine-tuning. In blue, all the layers up to $x$ are fine-tuned. In orange, all the layers after $x$ are fine-tuned.}
+    \caption[Partial fine-tuning]{Partial fine-tuning. The $x$ axis is the index of the layer and the y axis the Dice index. In blue, all the layers up to $x$ are fine-tuned. In orange, all the layers after $x$ are fine-tuned.}
     \label{fig:partial_transfer}
 \end{figure}
 
@@ -230,7 +240,7 @@ We place this layer at the entrance of the network and perform the inverse trans
 
 \begin{figure}[htb]
 	\includegraphics[width=\textwidth]{img_transfer/Intensity_Block}
-    \caption{Intensity Layer. ``Parameters Prediction'' can be any model, in our case it is a 3-layers ConvNet.}
+    \caption[Intensity Layer]{Intensity Layer. ``Parameters Prediction'' can be any model, in our case it is a 3-layers ConvNet.}
     \label{fig:block}
 \end{figure}
 
@@ -273,7 +283,7 @@ where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the 
     \hline
 \end{tabular}
 	\vspace{2mm}
-	\caption{Performance of the baseline and the different transfer methods. Each result is averaged over 5 random seeds impacting the separation of the database into training and testing sets, and the weights initialization of the networks.}
+	\caption[Performance of the baseline and the different transfer methods]{Performance of the baseline and the different transfer methods. Each result is averaged over 5 random seeds impacting the separation of the database into training and testing sets, and the weights initialization of the networks.}
     \label{table:results}
 \end{table}
 
@@ -337,14 +347,14 @@ The best results were obtained by combining the geometric input and learning to 
     \centering
     \includegraphics[width=0.95\linewidth]{img_transfer/hist_children} 
   \end{subfigure} 
-  \caption{Histogram of Dice coefficient on baseline models. In red is the adults baseline, blue is the children baseline. Left: Dice coefficient on adults, right: Dice coefficient on children.}
+  \caption[Histogram of Dice coefficient on baseline models]{Histogram of Dice coefficient on baseline models. In red is the adults baseline, blue is the children baseline. Left: Dice coefficient on adults, right: Dice coefficient on children.}
   \label{fig:hist} 
 \end{figure}
 
 \begin{figure}[htb]
     \centering
 	\includegraphics[width=\textwidth]{img_transfer/seg_good_bad}
-    \caption{Middle slice of 6 different volumes and a network segmentation superposed on it. The top row shows good segmentations with a Dice index $> 0.90$. The bottom row shows segmentations with a Dice index between $0.60$ and $0.70$. They show the most common mistakes made by the network.}
+    \caption[Middle slice of 6 different volumes and a network segmentation superposed on it]{Middle slice of 6 different volumes and a network segmentation superposed on it. The top row shows good segmentations with a Dice index $> 0.90$. The bottom row shows segmentations with a Dice index between $0.60$ and $0.70$. They show the most common mistakes made by the network.}
     \label{fig:mseg}
 \end{figure}
 

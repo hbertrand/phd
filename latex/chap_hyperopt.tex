@@ -515,7 +515,7 @@ From this equation we can compute the number of draws required to have drawn a m
 
 In Table~\ref{table:random_search_bounds}, we present some of those results, which allow us to draw the following strong conclusion. For any hyper-parameter space, random search will draw a model in the top $5 \%$ of models in 90 draws with a probability of $99 \%$. Less than a hundred draws is sufficient to draw one of the best models of any hyper-parameter space. It is a surprisingly low number given the simplicity of the method.
 
-However that is only one of the questions we asked. Ranking the models by their performance does not guarantee that a model in the top $\alpha \%$ is within $\alpha \%$ of the performance of the best model, unless model performance happens to be uniformly distributed. Since we have no idea of how model performance is distributed, we cannot go further in our theoretical analysis. In Section~\ref{ssec:cifar_analysis}, we return to this question by studying empirically the distribution of model performance.
+However that is only one of the questions we asked. Ranking the models by their performance does not guarantee that a model in the top $\alpha \%$ is within $\alpha \%$ of the performance of the best model (i.e. whose performance verifies $l \leq (1 + \alpha) l_{min}$), unless model performance happens to be uniformly distributed. Since we have no idea of how model performance is distributed, we cannot go further in our theoretical analysis. In Section~\ref{ssec:cifar_analysis}, we return to this question by studying empirically the distribution of model performance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Bayesian optimization efficiency}
@@ -543,7 +543,7 @@ We then compare in which order the different methods selected the models. The me
 
 However one run is not enough to conclude that Bayesian optimization on average is more efficient than random search. Due to the huge computing cost, we cannot do hundreds of runs with different seeds and retrain each network every time. But if we do not retrain the network but change the seeds of the search policy, we can simulate hundreds of runs at a low cost. 
 
-There are a total of $600!$ way to explore this space, but because we do not retrain the models, all the randomness in Bayesian optimization is in the choice of the first model, leaving us with only 600 possible paths through this space. We computed them all, then randomly selected 600 ordering for random search.
+There are a total of $600!$ way to explore this space, but because we do not retrain the models, all the randomness in Bayesian optimization is in the choice of the first model\footnote{This is true for our specific approach. Incorporating Gaussian noise in the observations ($\hat{y} = y + \mathcal{N} \left( \mu, \sigma)\right)$) for example would make our analysis incorrect.}, leaving us with only 600 possible paths through this space. We computed them all, then randomly selected 600 ordering for random search.
 
 \subsubsection{Models distribution}
 
@@ -622,7 +622,7 @@ To confirm whether the Gaussian process is learning the structure of the hyper-p
 
 We designed an experiment to measure and compare the performance of random search and Bayesian optimization on a setting mimicking real life usage. Performance of random search matched closely theoretical results, showing the surprising efficiency of this method. Bayesian optimization outperformed random search on every metric, which justifies its much higher implementation cost.
 
-Analysis of the models performance suggested that it is normally distributed, but testing on other tasks with other hyper-parameter spaces is required. Likewise, while we expect Bayesian optimization to always outperform random search, further confirmation is required.
+Extending the hyper-parameter space would yield insights into how Bayesian optimization behaves in larger spaces. This framework of testing could be used to observe the behaviour of other methods such as Hyperband. We observed models performance to be normally distributed, but the scope is limited to one hyper-parameter space on one task. To the best of our knowledge there is no theory on how to build good hyper-parameter spaces and understanding the relation between models, tasks and model performance would be of practical use to the design of hyper-parameter optimization methods.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Combining Bayesian Optimization and Hyperband}
@@ -634,11 +634,11 @@ This section describes and extends the work presented at CAp 2017 (\textcite{ber
 \subsection{Hyperband}
 \label{ssec:hyperband}
 
-A property of neural networks is that their training is iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
+A property of neural networks is that their training is usually iterative, usually some variant of gradient descent. A consequence is that it is possible to interrupt training at any time, evaluate the network, then resume training. This is the property Hyperband (\textcite{li2017ICLR}) takes advantage of.
 
 The principle is simple: pick randomly a group of configurations from a uniform distribution, train the corresponding networks partially, evaluate them, resume training of the most performing ones, and continue on until a handful of them have been trained to completion. Then pick a new group and repeat the cycle until exhaustion of the available resources.
 
-But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making their evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, this minimum time before evaluation is hard to establish and changes from one task to the other. Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the maximum number of resources allowed per model.
+But a problem appears: at which point in the training can we start evaluating the models? Too soon and they will not have started to converge, making their evaluation meaningless, too late and we have wasted precious resources training under-performing models. Moreover, this minimum time before evaluation is hard to establish and changes from one task to the other. Some hyper-parameters (such as the learning rate) even influence the training speed! Hyperband's answer is to divide a cycle into brackets. Each bracket has the same quantity of resource at its disposal. The difference between brackets is the point at which they start evaluating the models. The first bracket will start evaluating and discarding models very early, allowing it to test a bigger number of configurations, while the last bracket will test only a small number of configurations but will train them until the maximum number of resources allowed per model.
 
 The algorithm is controlled by two hyper-parameters: the maximal quantity of resources $R$ that can be allocated to a given model, and the proportion of configurations $\eta$ kept at each evaluation. $R$ is typically specified in number of epochs or in minutes. At each evaluation, $1 / \eta$ models are kept while the rest are discarded. 
 
@@ -651,7 +651,7 @@ As a result, Hyperband does not improve the quality of its selection with time, 
 
 Combining the methods fixes these problems. Model selection is done by Bayesian optimization as described in Section~\ref{sec:bo}, then Hyperband train them as described in Section~\ref{ssec:hyperband}. Two changes are required for Bayesian optimization, as it needs some way to distinguish between fully-trained models and partially trained models. To do that, the training time becomes an hyper-parameter, making the performance of each model at every minute a distinct point. The performance prediction is then done at the training time corresponding to Hyperband's first evaluation, to have only one prediction per model.
 
-The second change is to normalize the values returned by the acquisition function to make it a probability distribution. In the standard usage of Bayesian optimization, the chosen model is the argmax of the acquisition function. Choosing the top $\alpha$ models yields models that are very close as the acquisition function is smooth and gives similar values for nearby combinations. This strategy removes the property of Hyperband to explore many regions of space at the same time. Normalizing the values and drawing from this distribution keeps this property, while making the selection smarter over time as it changes to reflect the knowledge acquired from the trained models.
+The second change is to normalize the values returned by the acquisition function to make it a probability distribution, i.e. divide each value by the sum of all values, so that the sum of all normalized values is equal to one. In the standard usage of Bayesian optimization, the chosen model is the argmax of the acquisition function. Choosing the top $\alpha$ models yields models that are very close as the acquisition function is smooth and gives similar values for nearby combinations. This strategy removes the property of Hyperband to explore many regions of space at the same time. Normalizing the values and drawing from this distribution keeps this property, while making the selection smarter over time as it changes to reflect the knowledge acquired from the trained models.
 
 The proposed algorithm is as follows: the first group of configurations is chosen randomly and evaluated according to Hyperband. All subsequent selections are done by training a Gaussian process with a squared-exponential kernel on all evaluated models. The expected improvement is then computed on all untested combinations and normalized to make a probability distribution from which the next group of models is sampled.
 
@@ -699,20 +699,20 @@ For Hyperband, we chose $R = 27$, meaning 27 models are chosen at each iteration
 \end{figure}
 
 The evaluation measure that matters when comparing methods is the loss of the best model found at a given time, and is illustrated in Figure~\ref{fig:combining_loss} for the two individual methods and their combination (5 runs each). 
-These results suggest that Bayesian optimization (in blue) performs slightly worse than both other methods, and that Hyperband with Bayesian optimization (in red) finds a better model quicker than Hyperband (in green). However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this evaluation measure. 
+The running median suggest that Bayesian optimization (in blue) performs slightly worse than both other methods, and that Hyperband with Bayesian optimization (in red) finds a better model quicker than Hyperband (in green). However, due to the stochastic nature of the methods, many more runs would be needed to draw definite conclusions from this evaluation measure. 
 
 It is more informative to look at the running median of the loss of all models trained at a given time, as it gives us an idea of the quality of the models tried as the methods progress. Ideally the running median should go down for Bayesian optimization and Hyperband as more models are tested and the methods either learn the shape of the space or stop training inefficient models. Bayesian optimization performs notably worse than the other two methods. Hyperband and Hyperband + BO have similar performance, though Hyperband + BO seems slightly better.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Discussion}
 
-Due to the part of chance in all three methods, five runs are not enough to draw definite conclusions on their performance. Ideally hundreds of runs would have been needed, and the computational cost of this endeavor was the main reason we did not pursue further this problem.
+Due to the part of chance in all three methods, five runs are not enough to draw definite conclusions on their performance. Ideally hundreds of runs would have been needed, and the computational cost of this endeavor was the main reason we did not pursue further this problem. At 4000 minutes per method per seed, the above experiment already required around 42 days of GPU time without accounting for the overhead (loading the data, building the models, ...).
 
 While the general idea of combining Hyperband and Bayesian optimization is valid, there are two problems with our specific approach. 
 
-As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. However the resulting distribution was very close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. This is why our version of Hyperband + BO performed barely better than Hyperband alone. 
+As mentioned previously, since Bayesian optimization is usually sequential, we normalized the results of the acquisition function to make it a probability distribution from which the models to train were sampled. However the resulting distribution was very close from a uniform distribution. This is because the expected improvement outputs values in a small range, i.e. the difference between the maximum and the minimum is at most a few orders of magnitude. When normalized, those extreme values would not be particularly likely, even with just a small hyper-parameters space of $19 200$ combinations. For example if the highest value is a hundred times the average value, after normalization, the corresponding model has only around $0.5\%$ chance of being sampled. This is why our version of Hyperband + BO performed barely better than Hyperband alone. 
 
-One potential solution would have been to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance discourages the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allows drawing many models simultaneously. 
+One potential solution is to use the "liar" strategy. After choosing a model but before training it, it is added to the training set with a low performance and the acquisition function is re-computed. The "lie" of the low performance discourages the acquisition function from giving high values to the surrounding models, and the argmax will be a completely different model. Repeating this process allows drawing many models simultaneously. 
 
 When drawing a large group of models at the same time as required by Hyperband, the cost of this process becomes important as the Gram matrix of the Gaussian process needs to be inverted many times. The incremental Cholesky decomposition presented in Section~\ref{sec:cholesky} could be used to make the process faster.
 
@@ -727,11 +727,13 @@ Informal observations of the chosen models revealed a second problem. After a fe
 
 While using the prediction at 27 minutes instead would avoid choosing the smaller models that overfit, it would also discard a lot of information as the predictions of all the models trained only partially would have reverted to the prior of the covariance function by 27 minutes. It would be better to design a special kernel to deal with only this hyper-parameter and that does not revert quickly. Inspiration for this kernel could be found in~\textcite{domhan2015} as these authors study models to extrapolate learning curves.
 
+Using a different strategy, this combination method would perform better than either Hyperband or Bayesian optimization, as shown recently in~\textcite{falkner2018}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Application: Classification of MRI Field-of-View}
 \label{sec:isbi}
 
-This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}). It aims at applying the approaches described earlier in this chapter to a real application: the classification of MRI field-of-view.
+This section describes and extends work presented at ISBI 2017 (\textcite{bertrand2017ISBI}). It aims at applying the hyper-parameter optimization studied earlier in this chapter to a real application: the classification of MRI field-of-view.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Dataset and problem description}
@@ -1008,7 +1010,7 @@ Another problem encountered is how to deal with models that cannot be trained (b
 
 Regarding the final models, testing at the volume level has shown that the models are robust and can generalize. Still, the neural network was not enough to obtain smooth coherent predictions, and we presented a decision scheme to fix that.
 
-Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. The model could also be improved by using a cyclic learning rate, spatial dropout on the convolutional layers and replacing the fully-connected layers with convolutional layers. More care should be put in designing the hyper-parameter space, to limit the number of un-trainable models. 
+Further work on this problem would involve improving the dataset by adding new volumes, new anatomical regions and defining stricter boundaries between regions. It could also be interesting to explore how to directly predict the boundaries of the regions using deep learning, instead of classifying each slice and using another method to obtain the regions. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \section{Conclusion}
