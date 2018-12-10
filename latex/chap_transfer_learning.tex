@@ -163,7 +163,7 @@ The volumes we give to the network have been down-sampled to a resolution of $4 
 \subsection{3D U-Net}
 \label{ssec:unet}
 
-\begin{figure}[htb]
+\begin{figure}[htbp]
     \centering
 	\includegraphics[width=\textwidth]{img_transfer/UNet}
     \caption{U-Net structure with our added transformation and intensity layers.}
@@ -259,6 +259,7 @@ where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the 
 
 \begin{table}[htb]
 	\centering
+	\arrayrulecolor{black}
 \begin{tabular}{|l|c|c|c|c|}
 	\hline
     Strategy & \# params & Time (s) & Dice Adults & Dice Children \\

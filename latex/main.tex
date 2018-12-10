@@ -182,9 +182,9 @@
 \pagestyle{fancy}
 \fancyhf{}
 %\fancyhead[R]{\thepage}
-\fancyhead[LE]{\fontsize{10}{12} \selectfont \slshape \rightmark}
-\fancyhead[RO]{\fontsize{10}{12} \selectfont \slshape \leftmark}
-\fancyhead[LO,RE]{\thepage}
+\fancyhead[LO]{\fontsize{10}{12} \selectfont \slshape \rightmark}
+\fancyhead[RE]{\fontsize{10}{12} \selectfont \slshape \leftmark}
+\fancyhead[LE,RO]{\thepage}
 \setlength{\headheight}{30pt}
 
 \include{chap_introduction}
@@ -196,6 +196,10 @@
 \include{chap_segmentation}
 
 \include{chap_conclusion}
+
+% TODO:
+% - fig 3.9 legend correct ?
+% - fig 3.6 make addition more obvious
 
 \begin{appendices}
     \include{appendix_cholesky}
