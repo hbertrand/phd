@@ -248,7 +248,7 @@ A geometric transformation is not enough to express the differences between the 
 \begin{equation*}
 O \left( I_i \right) = K_i \left( I; \theta \right) * I_i + b_i \left( I; \theta \right)
 \end{equation*}
-where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the predicted parameters. In the end, two parameters have to be predicted for each feature map. Experiments showed that this layer works best when placed at the lowest level of the U-Net (see Figure~\ref{fig:unet}).
+where $K_i \left( I; \theta \right)$ and $b_i \left( I; \theta \right)$ are the predicted parameters. In the end, two parameters have to be predicted for each feature map. This layer is similar to the Feature-wise Linear Modulation layer from~\textcite{perez2018}. Experiments showed that this layer works best when placed at the lowest level of the U-Net (see Figure~\ref{fig:unet}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and Discussion}

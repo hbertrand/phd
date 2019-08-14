@@ -56,9 +56,11 @@ To the best of our knowledge, deep learning has not yet been used in the context
 
 Convolutional neural networks have been used recently to regress the parameters of the registration transformation from the input images (\textcite{miao2016},~\textcite{yang2016}).
 
-Another approach is to estimate a similarity measure from a neural network to be used in an iterative optimization strategy (\textcite{wu2013MICCAI},~\textcite{cheng2015},~\textcite{simonovosky2016MICCAI}).
+Another approach is to estimate a similarity measure from a neural network to be used in an iterative optimization strategy (\textcite{wu2013MICCAI},~\textcite{cheng2015},~\textcite{simonovosky2016MICCAI},~\textcite{Vos2019}).
 
 Recently, method using GANs (\textcite{goodfellow2014}) have been proposed.~\textcite{dalca2018MICCAI} developed a diffeomorphic integration layer coupled with a generative model that allows for registration without the ground-truth deformation fields. In the approach of~\textcite{fan2018MICCAI}, a registration network predicts the deformation and a discrimination network evaluates the quality of the alignment. The networks are trained in the typical GAN fashion. A regularization term is added to the loss of the registration network to make the deformation field smoother.
+
+Instead of a GAN, a variational auto-encoder can be considered to learn a latent space of transformations such as in~\textcite{krebs2018}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Segmentation by Implicit Template Deformation}
@@ -130,7 +132,7 @@ The next sections detail our choice of global transformation (Section~\ref{ssec:
 \subsection{Global transformation}
 \label{ssec:seg_global}
 
-A linear geometric transformation for 3D images is represented by a $4 \times 4$ matrix, meaning a total of 16 parameters that can be predicted. Directly predicting those parameters remove control on the kind of transformation that are predicted. In our case, we chose to predict instead translation, rotation and scaling parameters. 
+A linear geometric transformation for 3D images is represented by a $4 \times 4$ matrix, meaning a total of 16 parameters that can be predicted. Directly predicting those parameters, such as in Spatial Transformers (\textcite{jaderberg2015NIPS}), remove control on the kind of transformation that are predicted. In our case, we chose to predict instead translation, rotation and scaling parameters. 
 
 Three parameters are predicted for the translation on each axis, giving the following translation matrix $T$:
 \begin{equation*}
@@ -217,7 +219,7 @@ As mentioned in Section~\ref{sec:implicit}, the local deformation is then comput
 \begin{equation}
     L = u(x) + Id = [K_{\sigma} * v](x) + Id
 \end{equation}
-As in the implicit template deformation case, the Gaussian filtering is used here to enforce the regularity of the deformation field.
+As in the implicit template deformation case, the Gaussian filtering is used here to enforce the regularity of the deformation field. It has also been used in the context of registration with deep learning for the same reason (\textcite{krebs2019}).
 
 % We added an $L_2$ penalty term to the deformation fields $\psi$ in the loss function:
 % \begin{equation}
